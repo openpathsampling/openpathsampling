@@ -18,7 +18,7 @@ class TestTupleKeysSerializers(object):
         def from_dict(cls, dct):
             return cls(**dct)
 
-    def setup(self):
+    def setup_method(self):
         self.foo = {('a', 'b'): [1, 2], ('c', 'd'): [3, 4]}
         self.bar = 3
         self.obj = self.ExampleObj(self.foo, self.bar)

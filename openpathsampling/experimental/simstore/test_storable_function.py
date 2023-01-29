@@ -71,7 +71,7 @@ def test_wrap_numpy():
         assert isinstance(wrap_numpy(inp), np.ndarray)
 
 class TestStorableFunctionConfig(object):
-    def setup(self):
+    def setup_method(self):
         self.config = StorableFunctionConfig(processors=[
             scalarize_singletons,
             wrap_numpy,
@@ -160,7 +160,7 @@ class TestStorableFunctionConfig(object):
 
 
 class TestStorableFunctionResults(object):
-    def setup(self):
+    def setup_method(self):
         self.cv = StorableFunction(lambda x: x)
         self.cv.__uuid__ = "funcUUID"
         self.mapping = {'UUID1': "foo",
@@ -219,7 +219,7 @@ class TestStorableFunctionResults(object):
 @mock.patch(_MODULE + '.get_uuid', lambda x: x)
 @mock.patch(_MODULE + '.has_uuid', lambda x: isinstance(x, str))
 class TestStorableFunction(object):
-    def setup(self):
+    def setup_method(self):
         def get_expected(uuid):
             expected = {'uuid': 'eval', 'uuid1': 'other'}
             return expected[uuid]
@@ -394,7 +394,7 @@ class TestStorableFunction(object):
 
 
 class TestStorageFunctionHandler(object):
-    def setup(self):
+    def setup_method(self):
         self.backend = MockBackend()
         self.storage = mock.NonCallableMock(backend=self.backend)
         self.sf_handler = StorageFunctionHandler(self.storage)

@@ -393,7 +393,7 @@ class SQLStorageBackend(StorableNamedObject):
 
         self.metadata.create_all(self.engine)
         sfr_result_types = self.metadata.tables['sfr_result_types']
-        with self.engine.connect() as conn:
+        with self.engine.begin() as conn:
             conn.execute(sfr_result_types.insert(),
                          {'uuid': table_name, 'result_type': result_type})
         self.sfr_result_types[table_name] = result_type
@@ -427,7 +427,7 @@ class SQLStorageBackend(StorableNamedObject):
                    for uuid in unknown_uuids]
         table = self.metadata.tables[table_name]
         if results:
-            with self.engine.connect() as conn:
+            with self.engine.begin() as conn:
                 conn.execute(table.insert(), results)
 
         # update the cache
@@ -483,7 +483,7 @@ class SQLStorageBackend(StorableNamedObject):
     def add_tag(self, table_name, name, content):
         table = self.metadata.tables[table_name]
 
-        with self.engine.connect() as conn:
+        with self.engine.begin() as conn:
             conn.execute(table.insert(), [{'name': name,
                                            'content': content}])
 
