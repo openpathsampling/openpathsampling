@@ -319,9 +319,6 @@ class SQLStorageBackend(StorableNamedObject):
         with self.engine.connect() as conn:
             for block in grouper(idx_list, self.MAX_SQL_ITEMS):
                 or_stmt = sql.or_(*(table.c.idx == idx for idx in block))
-                # TODO: check correctness that these give the same SQL
-                # statement
-                # sel = table.select(or_stmt)
                 sel = table.select().where(or_stmt)
                 results.extend(list(conn.execute(sel)))
 
@@ -661,8 +658,6 @@ class SQLStorageBackend(StorableNamedObject):
 
     def table_len(self, table_name):
         table = self.metadata.tables[table_name]
-        # TODO: check that we're getting the same SQL here
-        # count_query = sql.select([sql.func.count()]).select_from(table)
         count_query = sql.select(sql.func.count()).select_from(table)
         with self.engine.connect() as conn:
             results = conn.execute(count_query)
