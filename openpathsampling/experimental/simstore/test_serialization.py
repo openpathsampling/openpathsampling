@@ -12,7 +12,7 @@ from .attribute_handlers import DEFAULT_HANDLERS
 
 
 class TestGenericLazyLoader(object):
-    def setup(self):
+    def setup_method(self):
         original_and_class = {
             'normal': (all_objects['int'], MockUUIDObject)
             # TODO: add iterable and mappable classes
@@ -97,7 +97,7 @@ class TestGenericLazyLoader(object):
 
 
 class TestProxyObjectFactory(object):
-    def setup(self):
+    def setup_method(self):
         self.storage = LoadingStorageMock({get_uuid(obj): obj
                                            for obj in all_objects.values()})
 

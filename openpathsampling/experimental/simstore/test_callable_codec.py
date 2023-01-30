@@ -14,7 +14,7 @@ def _globals_using_function(self):
     return _global_var
 
 class TestCallableCodec(object):
-    def setup(self):
+    def setup_method(self):
         self.codec = CallableCodec()
         self.functions = {
             'generic': lambda x: x.xyz[0][0],

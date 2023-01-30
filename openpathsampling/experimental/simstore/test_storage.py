@@ -7,7 +7,7 @@ from .test_utils import all_objects, UnnamedUUID, MockUUIDObject, MockStorage
 
 
 class TestStorageTable(object):
-    def setup(self):
+    def setup_method(self):
         self.storage = MockStorage()
         # Override default tables/uuids
         self.storage.backend.table_names = ["all"]
@@ -52,7 +52,7 @@ class TestStorageTable(object):
 
 
 class TestPseudoTable(object):
-    def setup(self):
+    def setup_method(self):
         self.objs = {None: UnnamedUUID(normal_attr=10)}
         self.objs.update(all_objects)
         self.obj_list = list(self.objs.values())
