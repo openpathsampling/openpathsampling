@@ -223,7 +223,7 @@ class TestGromacsEngine(object):
 
     def test_generate(self):
         if not has_gmx:
-            pytest.skip("Gromacs 5 (gmx) not found. Skipping test.")
+            pytest.skip("gmx not found. Skipping test.")
 
         if not HAS_MDTRAJ:
             pytest.skip("MDTraj not found. Skipping test.")
@@ -243,7 +243,7 @@ class TestGromacsEngine(object):
 
     def test_prepare(self):
         if not has_gmx:
-            raise SkipTest("Gromacs 5 (gmx) not found. Skipping test.")
+            pytest.skip("gmx not found. Skipping test.")
         self.engine.set_filenames(0)
         traj_0 = self.engine.trajectory_filename(0)
         snap = self.engine.read_frame_from_file(traj_0, 0)
@@ -273,7 +273,7 @@ class TestGromacsEngine(object):
         # snapshot should contain data -- the others should have their cache
         # cleared
         if not has_gmx:
-            pytest.skip("Gromacs (gmx) not found. Skipping test.")
+            pytest.skip("gmx not found. Skipping test.")
         if not HAS_MDTRAJ:
             pytest.skip("MDTraj not found. Skipping test.")
 

@@ -273,7 +273,7 @@ class ExternalEngine(DynamicsEngine):
 
     def _communicate(self):
         # this is primarily for debug purposes
-        self.proc.communicate()
+        return self.proc.communicate()
 
     def stop(self, trajectory):
         super(ExternalEngine, self).stop(trajectory)
