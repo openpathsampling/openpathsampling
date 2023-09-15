@@ -90,7 +90,10 @@ class TestGromacsEngine(object):
         self.engine = Engine(gro="conf.gro",
                              mdp="md.mdp",
                              top="topol.top",
-                             options={'mdrun_args': '-nt 1'},
+                             options={
+                                 'mdrun_args': '-nt 1',
+                                 'grompp_args': '-maxwarn 2',  # Berendsen
+                             },
                              base_dir=self.test_dir,
                              prefix="project")
 
@@ -220,7 +223,7 @@ class TestGromacsEngine(object):
 
     def test_generate(self):
         if not has_gmx:
-            raise SkipTest("Gromacs 5 (gmx) not found. Skipping test.")
+            pytest.skip("Gromacs 5 (gmx) not found. Skipping test.")
 
         if not HAS_MDTRAJ:
             pytest.skip("MDTraj not found. Skipping test.")

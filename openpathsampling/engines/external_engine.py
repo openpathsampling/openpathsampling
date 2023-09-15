@@ -13,6 +13,8 @@ import signal
 import shlex
 import time
 
+from subprocess import PIPE
+
 import sys
 if sys.version_info > (3, ):
     long = int
@@ -257,9 +259,10 @@ class ExternalEngine(DynamicsEngine):
         self.start_time = time.time()
         try:
             logger.info(self.engine_command())
-            # TODO: add the ability to have handlers for stdin and stdout
             self.proc = psutil.Popen(shlex.split(self.engine_command()),
-                                     preexec_fn=os.setsid)
+                                     preexec_fn=os.setsid,
+                                     stdout=PIPE,
+                                     stderr=PIPE)
         except OSError:  # pragma: no cover
             raise  # TODO: need to handle this, but do what?
         else:
@@ -267,6 +270,10 @@ class ExternalEngine(DynamicsEngine):
 
         if self.first_frame_in_file:
             _ = self.generate_next_frame()  # throw away repeat first frame
+
+    def _communicate(self):
+        # this is primarily for debug purposes
+        self.proc.communicate()
 
     def stop(self, trajectory):
         super(ExternalEngine, self).stop(trajectory)
