@@ -31,12 +31,11 @@ jobs:
       #   CVs) can differ between minor Python versions.
       matrix:
         CONDA_PY:
+          - "3.10"
           - "3.9"
-          - "3.8"
-          - "3.7"
         MINIMAL: [""]
         include:
-          - CONDA_PY: "3.7"
+          - CONDA_PY: "3.9"
             MINIMAL: "minimal"
 
     steps:
