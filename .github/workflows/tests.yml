@@ -34,7 +34,6 @@ jobs:
           - "3.9"
           - "3.8"
           - "3.7"
-          - "2.7"
         MINIMAL: [""]
         include:
           - CONDA_PY: "3.7"
