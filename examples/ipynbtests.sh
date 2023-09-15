@@ -33,6 +33,10 @@ case $PYTHON_VERSION in
         mstis=$dropbox_base_url/8rr0tt25xlm47cs/toy_mstis_1k_OPS1_py38.nc
         mistis=$dropbox_base_url/r3d5s5txbnpste0/toy_mistis_1k_OPS1_py38.nc
         ;;
+    "3.11")
+        mstis=$dropbox_base_url/8rr0tt25xlm47cs/toy_mstis_1k_OPS1_py38.nc
+        mistis=$dropbox_base_url/r3d5s5txbnpste0/toy_mistis_1k_OPS1_py38.nc
+        ;;
     *)
         echo "Unsupported Python version: $PYTHON_VERSION"
 esac
