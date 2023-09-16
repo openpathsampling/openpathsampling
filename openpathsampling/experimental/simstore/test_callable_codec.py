@@ -1,6 +1,7 @@
 import pytest
 from .callable_codec import *
 import dill
+import codecs
 
 import numpy as np
 
@@ -26,8 +27,10 @@ class TestCallableCodec(object):
         for func in ['generic', 'use_known_module', 'use_globals']:
             self.functions[func].__module__ = "__main__"
 
-        dilled = {key: dill.dumps(func, recurse=True)
-                  for key, func in self.functions.items()}
+        dilledbytes = {key: dill.dumps(func, recurse=True)
+                       for key, func in self.functions.items()}
+        dilled = {key: str(codecs.encode(val, 'base64'), 'utf-8')
+                  for key, val in dilledbytes.items()}
         self.dcts = {
             'generic': {
                 '__callable_name__': '<lambda>',
