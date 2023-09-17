@@ -144,8 +144,6 @@ class CallableCodec(object):
             elif '_dilled' in dct:
                 dilled = dct['_dilled']
 
-                # TODO: this is to support older SimStore storages; should
-                # add a deprecation warning on this
                 if isinstance(dilled, bytes):
                     SIMSTORE_CALLABLE_CODEC_STRING_NOT_BYTES.warn(
                         category=FutureWarning

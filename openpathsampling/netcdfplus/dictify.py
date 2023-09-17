@@ -381,15 +381,6 @@ class ObjectJSON(object):
         # if the easy way did not work, try saving it using bytecode
         if ObjectJSON.allow_marshal and callable(c):
             if sys.version_info > (3, 11):
-                # TODO: maybe move the warning to storage creation? makes
-                # more sense than screaming when they save things
-                warnings.warn(
-                    "netcdfplus is deprecated for Python 3.11+. "
-                    "Using SimStore is recommended. "
-                    "See https://github.com/dwhswenson/ops-storage-"
-                    "notebooks/blob/master/examples/01_simple_usage.ipynb "
-                    "for usage."
-                )
                 codec = make_callable_codec(safemode=False)
                 return codec.default(c)
 
