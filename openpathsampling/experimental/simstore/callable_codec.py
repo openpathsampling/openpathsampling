@@ -3,6 +3,8 @@ import dis
 import dill
 import codecs
 from .serialization_helpers import has_uuid, do_import
+from openpathsampling.deprecations \
+        import SIMSTORE_CALLABLE_CODEC_STRING_NOT_BYTES
 
 GLOBALS_ERROR_MESSAGE="""
 The function you tried to save uses information from global scope, which
@@ -145,7 +147,10 @@ class CallableCodec(object):
                 # TODO: this is to support older SimStore storages; should
                 # add a deprecation warning on this
                 if isinstance(dilled, bytes):
-                    dilled = codecs.encode(dilled, 'base64')
+                    SIMSTORE_CALLABLE_CODEC_STRING_NOT_BYTES.warn(
+                        category=FutureWarning
+                    )
+                    dilled = str(codecs.encode(dilled, 'base64'), 'utf-8')
 
                 dilledbytes = bytes(dilled, 'utf-8')  # or ascii
                 func =  dill.loads(codecs.decode(dilledbytes, 'base64'))

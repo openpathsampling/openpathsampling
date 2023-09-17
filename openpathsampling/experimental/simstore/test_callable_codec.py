@@ -1,4 +1,5 @@
 import pytest
+from unittest.mock import Mock
 from .callable_codec import *
 import dill
 import codecs
@@ -49,6 +50,16 @@ class TestCallableCodec(object):
                 '_dilled': dilled['use_known_module']
             }
             # use_globals never gets serialized
+        }
+        self.old_dicts = {
+            'generic': {
+                '__callable_name__': '<lambda>',
+                '_dilled': dilledbytes['generic']
+            },
+            'use_known_module': {
+                '__callable_name__': '_known_module_func',
+                '_dilled': dilledbytes['use_known_module']
+            }
         }
 
     @pytest.mark.parametrize(
@@ -111,6 +122,22 @@ class TestCallableCodec(object):
         # the module and therefore can't be tested my memory location
         if not safemode and func not in untestable:
             assert result == expected
+
+    def test_object_hook_old(self):
+        # TODO: OPS 2 will drop support for the functionality this tests
+        func = 'generic'  # others won't hit this part of the code
+        self.codec.known_modules = ['openpathsampling', 'numpy']
+        self.codec.safemode = False
+        warntext = "representation of callables"
+        with pytest.warns(FutureWarning, match=warntext):
+            result = self.codec.object_hook(self.old_dicts[func])
+
+        # test the function gives a few values the same
+        mock1 = Mock(xyz=[[1.0]])
+        mock2 = Mock(xyz=[[2.0], [3.0]])
+        expected = self.functions[func]
+        assert result(mock1) == expected(mock1) == 1.0
+        assert result(mock2) == expected(mock2) == 2.0
 
     def test_object_hook_not_mine(self):
         dct = {'foo': 'bar'}
