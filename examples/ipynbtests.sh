@@ -37,7 +37,6 @@ case $PYTHON_VERSION in
     "3.11")
         mstis="$dropbox_base_url2/c4idtymcaqvtftigce49c/toy_mstis_1k_OPS1_py311.nc?rlkey=soa6ba7okx66439egjyuscc5l&dl=1"
         mistis="$dropbox_base_url2/s0o7br93s60q0vez88phr/toy_mistis_1k_OPS1_py311.nc?rlkey=22vdvjovt25bj4a6gh3m4vrvj&dl=1"
-        unzip="true"
         ;;
     *)
         echo "Unsupported Python version: $PYTHON_VERSION"

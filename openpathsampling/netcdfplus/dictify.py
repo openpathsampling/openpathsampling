@@ -13,7 +13,6 @@ import ujson
 import marshal
 import types
 import opcode
-import warnings
 
 from .base import StorableObject
 
