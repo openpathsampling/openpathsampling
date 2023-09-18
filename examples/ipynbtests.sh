@@ -7,6 +7,7 @@ PYTHON_VERSION=`python -V 2>&1 | awk '{print $2}' | awk 'BEGIN { FS="." } { prin
 echo "Running tests for Python version: $PYTHON_VERSION"
 
 dropbox_base_url="https://www.dropbox.com/s"
+dropbox_base_url2="https://www.dropbox.com/scl/fi"
 
 case $PYTHON_VERSION in
     "2.7")
@@ -28,6 +29,14 @@ case $PYTHON_VERSION in
     "3.9")
         mstis=$dropbox_base_url/8rr0tt25xlm47cs/toy_mstis_1k_OPS1_py38.nc
         mistis=$dropbox_base_url/r3d5s5txbnpste0/toy_mistis_1k_OPS1_py38.nc
+        ;;
+    "3.10")
+        mstis=$dropbox_base_url/8rr0tt25xlm47cs/toy_mstis_1k_OPS1_py38.nc
+        mistis=$dropbox_base_url/r3d5s5txbnpste0/toy_mistis_1k_OPS1_py38.nc
+        ;;
+    "3.11")
+        mstis="$dropbox_base_url2/c4idtymcaqvtftigce49c/toy_mstis_1k_OPS1_py311.nc?rlkey=soa6ba7okx66439egjyuscc5l&dl=1"
+        mistis="$dropbox_base_url2/s0o7br93s60q0vez88phr/toy_mistis_1k_OPS1_py311.nc?rlkey=22vdvjovt25bj4a6gh3m4vrvj&dl=1"
         ;;
     *)
         echo "Unsupported Python version: $PYTHON_VERSION"
