@@ -341,6 +341,12 @@ class GromacsEngine(ExternalEngine):
         logger.info(cmd)
         run_cmd = shlex.split(cmd)
         return_code = psutil.Popen(run_cmd, preexec_fn=os.setsid).wait()
+        if return_code:
+            raise RuntimeError("An error occurred while running the "
+                               "command: `" + cmd + "`. Please check "
+                               "output of that command for details.")
+
+
         return return_code
 
     def cleanup(self):  # pragma: no cover
