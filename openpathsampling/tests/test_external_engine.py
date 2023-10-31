@@ -26,6 +26,21 @@ engine_dir = os.path.join(os.path.dirname(os.path.realpath(__file__)),
                           "external_engine")
 
 
+class FakeStep(object):
+    """Only here to allow restart_at_step to be tested"""
+    def __init__(self):
+        # Somehow object()'s can't have attributes but lambdas can ....
+        self.simulation = lambda: None
+        self.simulation.storage = lambda: None
+        self.simulation.storage.trajectories = [[]]
+
+
+class FakeExternalFrame(object):
+    """A frame that only has a filename"""
+    def __init__(self, file_name):
+        self.file_name = file_name
+
+
 class ExampleExternalEngine(peng.ExternalEngine):
     """Trivial external engine for engine.c in the tests.
     """
@@ -234,6 +249,64 @@ class TestExternalEngine(object):
 
         for testfile in glob.glob("test*out") + glob.glob("test*inp"):
             os.remove(testfile)
+
+    def test_restart_at_step_no_op(self):
+        options = {'n_frames_max': 10000,
+                   'engine_sleep': 100,
+                   'name_prefix': "test",
+                   'engine_directory': engine_dir,
+                   'filename_setter': RandomStringFilenames()}
+        eng = ExampleExternalEngine(options,
+                                    self.descriptor,
+                                    self.template)
+        eng.restart_at_step('foo')
+
+    def test_restart_at_step(self):
+        step = FakeStep()
+        frame = FakeExternalFrame('test123.fake')
+        step.simulation.storage.trajectories[-1] = [frame]
+        self.slow_engine.restart_at_step(step)
+        assert self.slow_engine.filename_setter() == 124
+
+    def test_restart_at_step_numbers_in_file_name(self):
+        step = FakeStep()
+        frame = FakeExternalFrame('simulation3-test12.fake')
+        step.simulation.storage.trajectories[-1] = [frame]
+        self.slow_engine.restart_at_step(step)
+        assert self.slow_engine.filename_setter() == 13
+
+    def test_restart_at_step_numbers_in_extensions(self):
+        step = FakeStep()
+        frame = FakeExternalFrame('test135.h5')
+        step.simulation.storage.trajectories[-1] = [frame]
+        self.slow_engine.restart_at_step(step)
+        assert self.slow_engine.filename_setter() == 136
+
+    def test_restart_at_step_directories_in_file_name(self):
+        step = FakeStep()
+        frame = FakeExternalFrame('/simulations/3/test13.fake')
+        step.simulation.storage.trajectories[-1] = [frame]
+        self.slow_engine.restart_at_step(step)
+        assert self.slow_engine.filename_setter() == 14
+
+    def test_restart_at_step_multiple_files_in_traj(self):
+        step = FakeStep()
+        frame1 = FakeExternalFrame('test1.fake')
+        frame2 = FakeExternalFrame('test1001.fake')
+        frame3 = FakeExternalFrame('test12.fake')
+        step.simulation.storage.trajectories[-1] = [frame1, frame2, frame3]
+        self.slow_engine.restart_at_step(step)
+        assert self.slow_engine.filename_setter() == 1002
+
+    def test_restart_at_step_multiple_trajectories(self):
+        step = FakeStep()
+        frame1 = FakeExternalFrame('test1.fake')
+        frame2 = FakeExternalFrame('test1001.fake')
+        frame3 = FakeExternalFrame('test12.fake')
+        for frame in [frame1, frame2, frame3]:
+            step.simulation.storage.trajectories.append([frame])
+        self.slow_engine.restart_at_step(step)
+        assert self.slow_engine.filename_setter() == 13
 
 
 class TestFilenameSetter(object):
