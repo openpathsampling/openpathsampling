@@ -286,11 +286,17 @@ class OpenMMEngine(DynamicsEngine):
                     platformProperties=self.openmm_properties
                 )
             elif platform is None:
+                # as of OpenMM 8.1, we can't give an empty props dict when
+                # platform is None
+                openmm_props = self.openmm_properties
+                if openmm_props == {}:
+                    openmm_props = None
+
                 self._simulation = openmm.app.Simulation(
                     topology=self.topology.mdtraj.to_openmm(),
                     system=self.system,
                     integrator=self.integrator,
-                    platformProperties=self.openmm_properties
+                    platformProperties=openmm_props,
                 )
             else:
                 self._simulation = openmm.app.Simulation(
