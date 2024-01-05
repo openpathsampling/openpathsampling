@@ -489,7 +489,7 @@ class ConditionalSequentialMoveChange(SequentialMoveChange):
 
 class NonCanonicalConditionalSequentialMoveChange(
                                             ConditionalSequentialMoveChange):
-    """ Special move change for reactive flux simulation.
+    """ Special move change for reactive flux and S-shooting simulation.
 
     This move change inherits from :class:`.ConditionalSequentialMoveChange`
     and returns the outcome of the last subchange.

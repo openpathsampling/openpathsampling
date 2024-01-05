@@ -47,6 +47,9 @@ except ImportError:
     simtk_quantity_codec = None
     SimtkQuantityHandler = None
 
+
+from .mdtraj_json import mdtraj_codecs
+
 import logging
 logger = logging.getLogger(__name__)
 
@@ -77,6 +80,7 @@ ops_schema_sql_metadata = {}
 
 # this defines the simulation object serializer for OPS
 EXTRA_CODECS = [simtk_quantity_codec] if simtk_quantity_codec else []
+EXTRA_CODECS += mdtraj_codecs
 EXTRA_HANDLERS = [SimtkQuantityHandler] if SimtkQuantityHandler else []
 CODECS = DEFAULT_CODECS + EXTRA_CODECS
 HANDLERS = DEFAULT_HANDLERS + EXTRA_HANDLERS

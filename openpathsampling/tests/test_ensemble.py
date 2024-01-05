@@ -195,7 +195,7 @@ class EnsembleTest(object):
 
 
 class TestPartOutXEnsemble(EnsembleTest):
-    def setup(self):
+    def setup_method(self):
         self.leaveX = PartOutXEnsemble(vol1)
 
     def test_leaveX(self):
@@ -238,11 +238,11 @@ class TestPartOutXEnsemble(EnsembleTest):
 
     def test_leaveX_str(self):
         volstr = "{x|Id(x) in [0.1, 0.5]}"
-        assert_equal(self.leaveX.__str__(), 
+        assert_equal(self.leaveX.__str__(),
                      "exists t such that x[t] in (not "+volstr+")")
 
 class TestAllInXEnsemble(EnsembleTest):
-    def setup(self):
+    def setup_method(self):
         self.inX = AllInXEnsemble(vol1)
 
     def test_inX(self):
@@ -306,7 +306,7 @@ class TestAllInXEnsemble(EnsembleTest):
                      "x[t] in "+volstr+" for all t")
 
 class TestAllOutXEnsemble(EnsembleTest):
-    def setup(self):
+    def setup_method(self):
         self.outX = AllOutXEnsemble(vol1)
 
     def test_outX(self):
@@ -369,7 +369,7 @@ class TestAllOutXEnsemble(EnsembleTest):
                      "x[t] in (not "+volstr+") for all t")
 
 class TestPartInXEnsemble(EnsembleTest):
-    def setup(self):
+    def setup_method(self):
         self.hitX = PartInXEnsemble(vol1)
 
     def test_hitX(self):
@@ -407,7 +407,7 @@ class TestPartInXEnsemble(EnsembleTest):
 
 
 class TestSequentialEnsemble(EnsembleTest):
-    def setup(self):
+    def setup_method(self):
         self.inX = AllInXEnsemble(vol1)
         self.outX = AllOutXEnsemble(vol1)
         self.hitX = PartInXEnsemble(vol1)
@@ -533,10 +533,10 @@ class TestSequentialEnsemble(EnsembleTest):
                         'lower_in_out_in_in' : False,
                         'upper_in_out_in_out_in' : False,
                         'lower_in_out_in_out_in' : False
-                    }   
+                    }
         for test in list(results.keys()):
             failmsg = "Failure in "+test+"("+str(ttraj[test])+"): "
-            self._single_test(self.pseudo_tis.can_append, 
+            self._single_test(self.pseudo_tis.can_append,
                                 ttraj[test], results[test], failmsg)
 
     def test_strict_can_append_tis(self):
@@ -559,10 +559,10 @@ class TestSequentialEnsemble(EnsembleTest):
             'lower_in_out_in_in' : False,
             'upper_in_out_in_out_in' : False,
             'lower_in_out_in_out_in' : False
-        }   
+        }
         for test in list(results.keys()):
             failmsg = "Failure in "+test+"("+str(ttraj[test])+"): "
-            self._single_test(self.pseudo_tis.strict_can_append, 
+            self._single_test(self.pseudo_tis.strict_can_append,
                                 ttraj[test], results[test], failmsg)
 
     def test_can_append_pseudominus(self):
@@ -604,10 +604,10 @@ class TestSequentialEnsemble(EnsembleTest):
             'lower_cross_in_cross_in' : False,
             'upper_in_cross_in_cross_in' : False,
             'lower_in_cross_in_cross_in' : False
-        }   
+        }
         for test in list(results.keys()):
             failmsg = "Failure in "+test+"("+str(ttraj[test])+"): "
-            self._single_test(self.pseudo_minus.can_append, 
+            self._single_test(self.pseudo_minus.can_append,
                                 ttraj[test], results[test], failmsg)
 
     def test_strict_can_append_pseudominus(self):
@@ -648,10 +648,10 @@ class TestSequentialEnsemble(EnsembleTest):
             'lower_cross_in_cross_in' : False,
             'upper_in_cross_in_cross_in' : False,
             'lower_in_cross_in_cross_in' : False
-        }   
+        }
         for test in list(results.keys()):
             failmsg = "Failure in "+test+"("+str(ttraj[test])+"): "
-            self._single_test(self.pseudo_minus.strict_can_append, 
+            self._single_test(self.pseudo_minus.strict_can_append,
                                 ttraj[test], results[test], failmsg)
 
     def test_can_prepend_pseudo_tis(self):
@@ -675,10 +675,10 @@ class TestSequentialEnsemble(EnsembleTest):
             'lower_in_out_in_in' : False,
             'upper_in_out_in_out_in' : False,
             'lower_in_out_in_out_in' : False
-        }   
+        }
         for test in list(results.keys()):
             failmsg = "Failure in "+test+"("+str(ttraj[test])+"): "
-            self._single_test(self.pseudo_tis.can_prepend, 
+            self._single_test(self.pseudo_tis.can_prepend,
                                 ttraj[test], results[test], failmsg)
 
     def test_strict_can_prepend_pseudo_tis(self):
@@ -701,10 +701,10 @@ class TestSequentialEnsemble(EnsembleTest):
             'lower_in_out_in_in' : False,
             'upper_in_out_in_out_in' : False,
             'lower_in_out_in_out_in' : False
-        }   
+        }
         for test in list(results.keys()):
             failmsg = "Failure in "+test+"("+str(ttraj[test])+"): "
-            self._single_test(self.pseudo_tis.strict_can_prepend, 
+            self._single_test(self.pseudo_tis.strict_can_prepend,
                                 ttraj[test], results[test], failmsg)
 
     def test_can_prepend_pseudo_minus(self):
@@ -738,10 +738,10 @@ class TestSequentialEnsemble(EnsembleTest):
             'lower_out_in_out_in': True,
             'upper_out_in_in_out_in' : True,
             'lower_out_in_in_out_in' : True
-        }   
+        }
         for test in list(results.keys()):
             failmsg = "Failure in "+test+"("+str(ttraj[test])+"): "
-            self._single_test(self.pseudo_minus.can_prepend, 
+            self._single_test(self.pseudo_minus.can_prepend,
                                 ttraj[test], results[test], failmsg)
 
     def test_strict_can_prepend_pseudo_minus(self):
@@ -775,14 +775,14 @@ class TestSequentialEnsemble(EnsembleTest):
             'lower_out_in_out_in': True,
             'upper_out_in_in_out_in' : True,
             'lower_out_in_in_out_in' : True
-        }   
+        }
         for test in list(results.keys()):
             failmsg = "Failure in "+test+"("+str(ttraj[test])+"): "
-            self._single_test(self.pseudo_minus.strict_can_prepend, 
+            self._single_test(self.pseudo_minus.strict_can_prepend,
                                 ttraj[test], results[test], failmsg)
 
 
-    
+
     def test_sequential_transition_frames(self):
         """SequentialEnsemble identifies transitions frames correctly"""
         ensemble = SequentialEnsemble([self.inX, self.outX])
@@ -793,7 +793,7 @@ class TestSequentialEnsemble(EnsembleTest):
                   }
         for test in list(results.keys()):
             failmsg = "Failure in "+test+"("+str(ttraj[test])+"): "
-            self._single_test(ensemble.transition_frames, 
+            self._single_test(ensemble.transition_frames,
                                 ttraj[test], results[test], failmsg)
 
     def test_sequential_simple_in_out_call(self):
@@ -806,7 +806,7 @@ class TestSequentialEnsemble(EnsembleTest):
                   }
         for test in list(results.keys()):
             failmsg = "Failure in "+test+"("+str(ttraj[test])+"): "
-            self._single_test(ensemble, 
+            self._single_test(ensemble,
                                 ttraj[test], results[test], failmsg)
 
 
@@ -898,7 +898,7 @@ class TestSequentialEnsemble(EnsembleTest):
             logging.getLogger('openpathsampling.ensemble').info(
                 "Testing: "+str(test)
             )
-            self._single_test(ensemble, ttraj[test], 
+            self._single_test(ensemble, ttraj[test],
                               match_results[test], failmsg)
 
         append_results = {
@@ -916,7 +916,7 @@ class TestSequentialEnsemble(EnsembleTest):
             logging.getLogger('opentis.ensemble').info(
                 "Testing: "+str(test)
             )
-            self._single_test(ensemble.can_append, ttraj[test], 
+            self._single_test(ensemble.can_append, ttraj[test],
                               append_results[test], failmsg)
 
     def test_sequential_enter_exit(self):
@@ -951,7 +951,7 @@ class TestSequentialEnsembleCombination(EnsembleTest):
     # useful to making sure that the ensemble combination of strict_can_*
     # works correctly, since this is where strict and normal have a
     # distinction
-    def setup(self):
+    def setup_method(self):
         self.ens1 = SequentialEnsemble([
             AllInXEnsemble(vol1) & LengthEnsemble(1),
             AllOutXEnsemble(vol1) & PartOutXEnsemble(vol2),
@@ -1185,7 +1185,7 @@ class TestSequentialEnsembleCombination(EnsembleTest):
         self._test_everything(self.combo_and.strict_can_prepend, and_true, False)
 
 class TestTISEnsemble(EnsembleTest):
-    def setup(self):
+    def setup_method(self):
         self.tis = TISEnsemble(vol1, vol3, vol2, op)
         self.traj = ttraj['upper_in_out_cross_out_in']
         self.minl = min(op(self.traj))
@@ -1269,7 +1269,7 @@ class EnsembleCacheTest(EnsembleTest):
         return cache.contents == { }
 
 class TestEnsembleCache(EnsembleCacheTest):
-    def setup(self):
+    def setup_method(self):
         self.fwd = EnsembleCache(direction=+1)
         self.rev = EnsembleCache(direction=-1)
         self.traj = ttraj['lower_in_out_in_in_out_in']
@@ -1366,7 +1366,7 @@ class TestEnsembleCache(EnsembleCacheTest):
 
 
 class TestSequentialEnsembleCache(EnsembleCacheTest):
-    def setup(self):
+    def setup_method(self):
         self.inX = AllInXEnsemble(vol1)
         self.outX = AllOutXEnsemble(vol1)
         self.length1 = LengthEnsemble(1)
@@ -1499,7 +1499,7 @@ class TestSlicedTrajectoryEnsemble(EnsembleTest):
             failmsg = "Failure in "+test+"("+tstr(ttraj[test])+"): "
             self._single_test(real_tis, ttraj[test],
                               sequential_tis(ttraj[test]), failmsg)
-            self._single_test(sliced_tis, ttraj[test], 
+            self._single_test(sliced_tis, ttraj[test],
                               sequential_tis(ttraj[test]), failmsg)
 
     def test_slice_outside_trajectory_range(self):
@@ -1601,7 +1601,7 @@ class TestSlicedTrajectoryEnsemble(EnsembleTest):
                      "("+inXstr+" in {1:-1})")
 
 class TestOptionalEnsemble(EnsembleTest):
-    def setup(self):
+    def setup_method(self):
         self.start_opt = SequentialEnsemble([
             OptionalEnsemble(AllOutXEnsemble(vol1)),
             AllInXEnsemble(vol1),
@@ -1857,7 +1857,7 @@ class TestOptionalEnsemble(EnsembleTest):
         assert_equal(opt_inX.__str__(), "{"+inX.__str__()+"} (OPTIONAL)")
 
 class TestPrefixTrajectoryEnsemble(EnsembleTest):
-    def setup(self):
+    def setup_method(self):
         self.inX = AllInXEnsemble(vol1)
 
     def test_bad_start_traj(self):
@@ -1907,7 +1907,7 @@ class TestPrefixTrajectoryEnsemble(EnsembleTest):
             outX,
             inX,
             outX,
-            inX & length1 
+            inX & length1
         ])
         traj = ttraj['upper_in_out_in_in_out_in']
         ens = PrefixTrajectoryEnsemble(pseudo_minus, traj[0:2])
@@ -1929,7 +1929,7 @@ class TestPrefixTrajectoryEnsemble(EnsembleTest):
 
 
 class TestSuffixTrajectoryEnsemble(EnsembleTest):
-    def setup(self):
+    def setup_method(self):
         xval = paths.FunctionCV("x", lambda s : s.xyz[0][0])
         vol = paths.CVDefinedVolume(xval, 0.1, 0.5)
         self.inX = AllInXEnsemble(vol)
@@ -1983,7 +1983,7 @@ class TestSuffixTrajectoryEnsemble(EnsembleTest):
             self.outX,
             self.inX,
             self.outX,
-            self.inX & length1 
+            self.inX & length1
         ])
         traj = ttraj['upper_in_out_in_in_out_in']
 
@@ -2009,7 +2009,7 @@ class TestSuffixTrajectoryEnsemble(EnsembleTest):
         assert_equal(ens._cache_can_prepend.trusted, True)
 
 class TestMinusInterfaceEnsemble(EnsembleTest):
-    def setup(self):
+    def setup_method(self):
         # Mostly we use minus ensembles where the state matches the first
         # interface. We also test the case where that isn't in, in which
         # case there's an interstitial zone. (Only test it for nl=2 to keep
@@ -2338,7 +2338,7 @@ class TestMinusInterfaceEnsemble(EnsembleTest):
 
 # TODO: this whole class should become a single test in SeqEns
 class TestSingleEnsembleSequentialEnsemble(EnsembleTest):
-    def setup(self):
+    def setup_method(self):
         #self.inner_ens = AllInXEnsemble(vol1 | vol2)
         self.inner_ens = LengthEnsemble(3) & AllInXEnsemble( vol1 | vol2 )
         self.ens = SequentialEnsemble([self.inner_ens])
@@ -2355,7 +2355,7 @@ class TestSingleEnsembleSequentialEnsemble(EnsembleTest):
 
 
 class TestEnsembleSplit(EnsembleTest):
-    def setup(self):
+    def setup_method(self):
         self.inA = AllInXEnsemble(vol1)
         self.outA = AllOutXEnsemble(vol1)
 
@@ -2453,7 +2453,7 @@ class TestEnsembleSplit(EnsembleTest):
         assert(traj3.subtrajectory_indices(sub_traj) == [2,3,4])
 
 class TestVolumeCombinations(EnsembleTest):
-    def setup(self):
+    def setup_method(self):
         self.outA = paths.AllOutXEnsemble(vol1)
         self.outB = paths.AllOutXEnsemble(~vol2)
         self.outA.special_debug = True
@@ -2475,7 +2475,7 @@ class TestVolumeCombinations(EnsembleTest):
     def _test_trusted(self, trajectory, function, results,
                       cache_results=None, direction=+1, start_traj_len=1):
         # Tests `trajectory` frame by frame in a forward direction for the
-        # `function`, expecting `results`. Additionally, can take the 
+        # `function`, expecting `results`. Additionally, can take the
 
         if cache_results is None:
             cache_results = {}
@@ -2577,8 +2577,8 @@ class TestVolumeCombinations(EnsembleTest):
     def test_can_append_outA_or_outB(self):
         self._test_trusted(
             trajectory=self.local_ttraj['upper_out_in_out_out_cross'],
-            function=self.outA_or_outB.can_append, 
-            results=[True, True, True, True, False], 
+            function=self.outA_or_outB.can_append,
+            results=[True, True, True, True, False],
             cache_results={
                 self.outA._cache_can_append : [True, False, False, False, False],
                 self.outB._cache_can_append : [None, True, True, True, False]

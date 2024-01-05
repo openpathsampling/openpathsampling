@@ -26,7 +26,7 @@ from nose.plugins.skip import SkipTest
 
 
 class TestStorage(object):
-    def setup(self):
+    def setup_method(self):
         if not md:
             raise SkipTest("mdtraj not installed")
         self.mdtraj = md.load(data_filename("ala_small_traj.pdb"))
@@ -55,7 +55,7 @@ class TestStorage(object):
             engine=self.engine
         )
 
-    def teardown(self):
+    def teardown_method(self):
         if os.path.isfile(self.filename):
             os.remove(self.filename)
 

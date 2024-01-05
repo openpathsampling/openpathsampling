@@ -26,7 +26,7 @@ logging.getLogger('openpathsampling.storage').setLevel(logging.CRITICAL)
 logging.getLogger('openpathsampling.netcdfplus').setLevel(logging.CRITICAL)
 
 class TestOpenMMSnapshot(object):
-    def setup(self):
+    def setup_method(self):
         if not openmm:
             raise SkipTest("OpenMM not installed")
         if not omt:
@@ -53,6 +53,12 @@ class TestOpenMMSnapshot(object):
 
     def test_masses_from_simulation(self):
         assert len(self.test_snap.masses) == self.n_atoms
+
+    def test_masses_for_virtual_sites(self):
+        snap = omm_engine.snapshot_from_pdb(data_filename("tip4p_water.pdb"))
+        snap_masses = snap.masses
+        # just check that the virtual site has a mass of 0
+        assert snap_masses[3].value_in_unit(snap_masses[3].unit) == 0
 
     def test_n_degrees_of_freedom(self):
         assert self.test_snap.n_degrees_of_freedom == 51

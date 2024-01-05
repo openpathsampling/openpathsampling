@@ -100,7 +100,7 @@ class TISAnalysisTester(object):
         sampling_AB = network.analysis_to_sampling[analysis_AB][0]
         return sampling_AB.ensembles
 
-    def setup(self):
+    def setup_method(self):
         # set up the trajectories, ensembles, etc. for this test
         self.HAS_TQDM = paths.progress.HAS_TQDM
         paths.progress.HAS_TQDM = False  # turn of progress bars
@@ -161,7 +161,7 @@ class TISAnalysisTester(object):
         )
 
 
-    def teardown(self):
+    def teardown_method(self):
         paths.progress.HAS_TQDM = self.HAS_TQDM
 
 
@@ -205,8 +205,8 @@ class TestWeightedTrajectories(TISAnalysisTester):
 class TestFluxToPandas(TISAnalysisTester):
     # includes tests for default_flux_sort and flux_matrix_pd
     # as a class to simplify setup of flux objects
-    def setup(self):
-        super(TestFluxToPandas, self).setup()
+    def setup_method(self):
+        super(TestFluxToPandas, self).setup_method()
         interfaces_A = self.mstis.from_state[self.state_A].interfaces
         interfaces_B = self.mstis.from_state[self.state_B].interfaces
         pairs_A = list(itertools.product([self.state_A], interfaces_A))
@@ -255,8 +255,8 @@ class TestFluxToPandas(TISAnalysisTester):
 
 
 class TestDictFlux(TISAnalysisTester):
-    def setup(self):
-        super(TestDictFlux, self).setup()
+    def setup_method(self):
+        super(TestDictFlux, self).setup_method()
         self.innermost_interface_A = \
             self.sampling_ensembles_for_transition(self.mistis,
                                                    self.state_A,
@@ -308,8 +308,8 @@ class TestDictFlux(TISAnalysisTester):
 
 
 class TestMinusMoveFlux(TISAnalysisTester):
-    def setup(self):
-        super(TestMinusMoveFlux, self).setup()
+    def setup_method(self):
+        super(TestMinusMoveFlux, self).setup_method()
 
         a = 0.1  # just a number to simplify the trajectory-making
         minus_move_descriptions = [
@@ -674,8 +674,8 @@ class TestStandardTransitionProbability(TISAnalysisTester):
 
 
 class TestTransitionDictResults(TISAnalysisTester):
-    def setup(self):
-        super(TestTransitionDictResults, self).setup()
+    def setup_method(self):
+        super(TestTransitionDictResults, self).setup_method()
         results_dict = {(self.state_A, self.state_B): 1,
                         (self.state_B, self.state_A): 2}
         self.mistis_transition_dict = TransitionDictResults(
@@ -775,8 +775,8 @@ class TestTISAnalysis(TISAnalysisTester):
         )
         return tis_analysis
 
-    def setup(self):
-        super(TestTISAnalysis, self).setup()
+    def setup_method(self):
+        super(TestTISAnalysis, self).setup_method()
         self.mistis_analysis = self._make_tis_analysis(self.mistis)
         self.mistis_analysis.calculate(self.mistis_steps)
         self.mstis_analysis = self._make_tis_analysis(self.mstis)

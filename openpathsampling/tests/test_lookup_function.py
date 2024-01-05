@@ -14,7 +14,7 @@ from openpathsampling.numerics import (
 )
 
 class TestLookupFunctionGroup(object):
-    def setup(self):
+    def setup_method(self):
         x1 = [0.0, 1.0, 2.0, 3.0, 4.0]
         y1 = [0.1, 1.3, 1.8, 3.3, 4.2]
         luf1 = LookupFunction(x1, y1)
@@ -75,7 +75,7 @@ class TestLookupFunctionGroup(object):
 
 
 class TestVoxelLookupFunction(object):
-    def setup(self):
+    def setup_method(self):
         counter = collections.Counter({(0,0): 1.0, (0,2): 2.0, (1,4): 4.0,
                                        (-1,-1): 5.0})
         self.lookup = VoxelLookupFunction(left_bin_edges=(-1.0, 1.0),

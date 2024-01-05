@@ -19,7 +19,7 @@ logging.getLogger('openpathsampling.netcdfplus').setLevel(logging.CRITICAL)
 
 
 class TestWHAM(object):
-    def setup(self):
+    def setup_method(self):
         self.exact = [1.0, 0.5, 0.25, 0.125, 0.0625, 0.03125, 0.015625]
         self.iface1 = [2.0, 1.0, 0.5, 0.25, 0.125, 0.0625, 0.0]
         self.iface2 = [1.0, 1.0, 1.0, 0.5, 0.25, 0.125, 0.0625]
@@ -114,7 +114,7 @@ class TestWHAM(object):
     def test_generate_lnZ(self):
         guess = [1.0, 1.0, 1.0]
         expected_lnZ = np.log([1.0, old_div(1.0,4.0), old_div(7.0,120.0)])
-        # TODO: I'm not sure the last is log(7/120) 
+        # TODO: I'm not sure the last is log(7/120)
         # however, I got the same result out of the old version, too, and
         # this does combine into the correct result in the end (see
         # test_output_histogram)

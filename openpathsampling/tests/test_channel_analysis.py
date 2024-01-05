@@ -18,7 +18,7 @@ logging.getLogger('openpathsampling.ensemble').setLevel(logging.CRITICAL)
 logging.getLogger('openpathsampling.netcdfplus').setLevel(logging.CRITICAL)
 
 class TestChannelAnalysis(object):
-    def setup(self):
+    def setup_method(self):
         cv = paths.FunctionCV("Id", lambda snap: snap.xyz[0][0])
         self.state_A = paths.CVDefinedVolume(cv, -0.1, 0.1)
         self.state_B = ~paths.CVDefinedVolume(cv, -1.0, 1.0)

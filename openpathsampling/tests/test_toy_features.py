@@ -12,7 +12,7 @@ logging.getLogger('openpathsampling.storage').setLevel(logging.CRITICAL)
 logging.getLogger('openpathsampling.netcdfplus').setLevel(logging.CRITICAL)
 
 class TestToySnapshotFeatures(object):
-    def setup(self):
+    def setup_method(self):
         integ = toys.LangevinBAOABIntegrator(dt=0.002,
                                              temperature=1.0,
                                              gamma=2.5)

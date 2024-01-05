@@ -107,7 +107,7 @@ master_doc = 'index'
 
 # General information about the project.
 project = u'OpenPathSampling'
-copyright = u'2014-2021, David W.H. Swenson, Jan-Hendrik Prinz, John Chodera, Peter Bolhuis'
+copyright = u'2014-2022, David W.H. Swenson, Jan-Hendrik Prinz, John Chodera, Peter Bolhuis'
 
 # The version info for the project you're documenting, acts as replacement for
 # |version| and |release|, also used in various other places throughout the
@@ -218,13 +218,20 @@ html_logo = "logo/logo+whitetext.png"
 html_static_path = ['_static']
 
 # from http://rackerlabs.github.io/docs-rackspace/tools/rtd-tables.html
-html_context = {
-    'css_files': [
-        '_static/theme_overrides.css',  # override wide tables in RTD theme
-        '_static/ipynb.css',  # tweak output of
-        ],
-     }
+# BEFORE sphinx_rtd_theme 1.0
+# html_context = {
+#     'css_files': [
+#         '_static/theme_overrides.css',  # override wide tables in RTD theme
+#         '_static/ipynb.css',  # tweak output of
+#         ],
+#      }
 
+# after sphinx_rtd_theme 1.0; see
+# https://github.com/readthedocs/sphinx_rtd_theme/issues/1240
+html_css_files = [
+    'theme_overrides.css',  # override wide tables in RTD theme
+    'ipynb.css',  # tweak output of notebooks
+]
 
 # Add any extra paths that contain custom files (such as robots.txt or
 # .htaccess) here, relative to this directory. These files are copied

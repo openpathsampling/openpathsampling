@@ -18,7 +18,7 @@ logging.getLogger('opentis.initialization').setLevel(logging.CRITICAL)
 logging.getLogger('openpathsampling.storage').setLevel(logging.CRITICAL)
 
 class TestSummarizeTrajectoryVolumes(object):
-    def setup(self):
+    def setup_method(self):
         op = paths.FunctionCV("Id", lambda snap : snap.coordinates[0][0])
         vol1 = paths.CVDefinedVolume(op, 0.1, 0.5)
         vol2 = paths.CVDefinedVolume(op, -0.1, 0.7)
@@ -55,7 +55,7 @@ class TestSummarizeTrajectoryVolumes(object):
             "A-B-I-X"
         )
         assert_items_equal(
-            self._make_traj("abix").summarize_by_volumes_str(voldict, " blah "), 
+            self._make_traj("abix").summarize_by_volumes_str(voldict, " blah "),
             "A blah B blah I blah X"
         )
 
@@ -84,7 +84,7 @@ class TestSummarizeTrajectoryVolumes(object):
         )
 
 class TestSubtrajectoryIndices(object):
-    def setup(self):
+    def setup_method(self):
         op = paths.FunctionCV("Id", lambda snap : snap.coordinates[0][0])
         vol1 = paths.CVDefinedVolume(op, 0.1, 0.5)
         vol2 = paths.CVDefinedVolume(op, -0.1, 0.7)

@@ -53,6 +53,10 @@ class AbstractMockUUIDObject(object):
             name = None
         return cls(name=name, **dct)
 
+    @property
+    def uuid(self):
+        return self.__uuid__
+
 class MockUUIDObject(AbstractMockUUIDObject):
     attr_list = ['name', 'normal_attr', 'obj_attr', 'list_attr',
                  'dict_attr', 'lazy_attr']
@@ -142,6 +146,23 @@ class MockBackend(object):
     def uuid_row_to_table_name(self, row):
         return self.table_names[row.table]
 
+    def table_get_item(self, table, item):
+        idx = self.table_names.index(table)
+        return self.tables[idx][item]
+
+    def table_len(self, table):
+        idx = self.table_names.index(table)
+        return len(self.tables[idx])
+
+
+class MockStorage(object):
+    def __init__(self, backend=None):
+        self.backend = backend or MockBackend()
+
+    def load(self, uuids):
+        uuid_rows = self.backend.load_uuids_table(uuids)
+        return self.backend.load_table_data(uuid_rows)
+
 
 class LoadingStorageMock(object):
     def __init__(self, uuid_dict):
@@ -177,7 +198,7 @@ all_objects = create_test_objects()
 
 
 class TestMockBackend(object):
-    def setup(self):
+    def setup_method(self):
         self.backend = MockBackend()
 
     @pytest.mark.parametrize(('obj_name', 'table_idx', 'idx'),

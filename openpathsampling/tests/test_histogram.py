@@ -45,7 +45,7 @@ class TestFunctions(object):
 
 
 class TestHistogram(object):
-    def setup(self):
+    def setup_method(self):
         self.data = [1.0, 1.1, 1.2, 1.3, 2.0, 1.4, 2.3, 2.5, 3.1, 3.5]
         self.nbins = 5
         self.bins = [1.0, 1.5, 2.0, 2.5, 3.0, 3.5]
@@ -189,7 +189,7 @@ class TestHistogram(object):
 
 
 class TestSparseHistogram(object):
-    def setup(self):
+    def setup_method(self):
         data = [(0.0, 0.1), (0.2, 0.7), (0.3, 0.6), (0.6, 0.9)]
         self.histo = SparseHistogram(bin_widths=(0.5, 0.3),
                                      left_bin_edges=(0.0, -0.1))
@@ -232,7 +232,7 @@ class TestSparseHistogram(object):
 
 
 class TestHistogramPlotter2D(object):
-    def setup(self):
+    def setup_method(self):
         data = [(0.0, 0.1), (0.2, 0.7), (0.3, 0.6), (0.6, 0.9)]
         histo = SparseHistogram(bin_widths=(0.5, 0.3),
                                 left_bin_edges=(0.0, -0.1))

@@ -44,7 +44,7 @@ finally:
 
 
 class TestGroFileEngine(object):
-    def setup(self):
+    def setup_method(self):
         if not HAS_MDTRAJ:
             pytest.skip("MDTraj not installed.")
         self.gro = os.path.join(data_filename("gromacs_engine"), "conf.gro")
@@ -83,18 +83,21 @@ class TestGromacsEngine(object):
     # conf.gro, md.mdp, topol.top : standard Gromacs input files
     # project_trr/0000000.trr : working file, 4 frames
     # project_trr/0000099.trr : 49 working frames, final frame partial
-    def setup(self):
+    def setup_method(self):
         if not HAS_MDTRAJ:
             pytest.skip("MDTraj not installed.")
         self.test_dir = data_filename("gromacs_engine")
         self.engine = Engine(gro="conf.gro",
                              mdp="md.mdp",
                              top="topol.top",
-                             options={'mdrun_args': '-nt 1'},
+                             options={
+                                 'mdrun_args': '-nt 1',
+                                 'grompp_args': '-maxwarn 2',  # Berendsen
+                             },
                              base_dir=self.test_dir,
                              prefix="project")
 
-    def teardown(self):
+    def teardown_method(self):
         files = ['topol.tpr', 'mdout.mdp', 'initial_frame.trr', 'state.cpt',
                  'state_prev.cpt', 'traj_comp.xtc',
                  self.engine.trajectory_filename(1)]
@@ -220,7 +223,7 @@ class TestGromacsEngine(object):
 
     def test_generate(self):
         if not has_gmx:
-            raise SkipTest("Gromacs 5 (gmx) not found. Skipping test.")
+            pytest.skip("gmx not found. Skipping test.")
 
         if not HAS_MDTRAJ:
             pytest.skip("MDTraj not found. Skipping test.")
@@ -240,7 +243,7 @@ class TestGromacsEngine(object):
 
     def test_prepare(self):
         if not has_gmx:
-            raise SkipTest("Gromacs 5 (gmx) not found. Skipping test.")
+            pytest.skip("gmx not found. Skipping test.")
         self.engine.set_filenames(0)
         traj_0 = self.engine.trajectory_filename(0)
         snap = self.engine.read_frame_from_file(traj_0, 0)
@@ -265,6 +268,49 @@ class TestGromacsEngine(object):
         # files?
         pytest.skip()
 
+    def test_iter_generate_clear_cache(self):
+        # when running with iter_generate, only the most recently generated
+        # snapshot should contain data -- the others should have their cache
+        # cleared
+        if not has_gmx:
+            pytest.skip("gmx not found. Skipping test.")
+        if not HAS_MDTRAJ:
+            pytest.skip("MDTraj not found. Skipping test.")
+
+        def continue_condition(trajectory, trusted=False):
+            if len(trajectory) == 5:
+                return False
+            for snap in trajectory[1:-1]:
+                # the initial snapshot does not get cleared
+                # the final snapshot has not yet been cleared
+                assert snap._xyz is None
+                assert snap._velocities is None
+                assert snap._box_vectors is None
+            # the final snapshot should have been loaded, and not yet
+            # cleared
+            assert trajectory[-1]._xyz is not None
+            assert trajectory[-1]._velocities is not None
+            assert trajectory[-1]._box_vectors is not None
+            return True
+
+        cv_x0 = paths.CoordinateFunctionCV('x0', lambda snap:
+                                           snap.xyz[0][0])
+        in_all_space = paths.AllInXEnsemble(
+            paths.CVDefinedVolume(cv_x0, float("-inf"), float("inf"))
+        )
+
+        traj_0 = self.engine.trajectory_filename(0)
+        snap = self.engine.read_frame_from_file(traj_0, 0)
+        self.engine.filename_setter.reset(0)
+        traj = self.engine.generate(snap, running=[
+            in_all_space.can_append,
+            continue_condition
+        ])
+        assert len(traj) == 5
+        ttraj = md.load(self.engine.trajectory_filename(1),
+                        top=self.engine.gro)
+        assert len(ttraj) < 100
+
     def test_serialization_cycle(self):
         serialized = self.engine.to_dict()
         deserialized = Engine.from_dict(serialized)
@@ -273,7 +319,7 @@ class TestGromacsEngine(object):
 
 
 class TestGromacsExternalMDSnapshot(object):
-    def setup(self):
+    def setup_method(self):
         if not HAS_MDTRAJ:
             pytest.skip("MDTraj not installed.")
 
@@ -293,7 +339,7 @@ class TestGromacsExternalMDSnapshot(object):
         self.snapshot_shape = (1651, 3)
         self.storage_filename = "gmx_snap.nc"
 
-    def teardown(self):
+    def teardown_method(self):
         if os.path.isfile(self.storage_filename):
             os.remove(self.storage_filename)
 
@@ -378,4 +424,3 @@ class TestGromacsExternalMDSnapshot(object):
         npt.assert_almost_equal(internalized.xyz, reloaded.xyz)
         assert internalized.__class__ != self.snapshot.__class__
         assert internalized.__class__ == reloaded.__class__
-
