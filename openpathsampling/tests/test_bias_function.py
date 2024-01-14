@@ -4,7 +4,7 @@ from __future__ import absolute_import
 from builtins import range
 from builtins import object
 from past.utils import old_div
-from nose.tools import (assert_equal, assert_not_equal, assert_almost_equal,
+from nose.tools import (assert_not_equal, assert_almost_equal,
                         raises, assert_in)
 
 from nose.plugins.skip import Skip, SkipTest
@@ -180,12 +180,12 @@ class TestBiasEnsembleTable(object):
         bias_C = BiasEnsembleTable.ratios_from_dictionary(dict_C)
         bias_AB = bias_A + bias_B
         # check the ensembles_to_ids
-        assert_equal(len(bias_AB.ensembles_to_ids), 7)
+        assert len(bias_AB.ensembles_to_ids) == 7
         for ens in ens_A:
             assert_in(bias_AB.ensembles_to_ids[ens], [0, 1, 2])
         for ens in ens_B:
             assert_in(bias_AB.ensembles_to_ids[ens], [3, 4, 5])
-        assert_equal(bias_AB.ensembles_to_ids[ms_outer], 6)
+        assert bias_AB.ensembles_to_ids[ms_outer] == 6
 
         # check values
         df_A = bias_A.dataframe
@@ -203,14 +203,14 @@ class TestBiasEnsembleTable(object):
                 col_AB = bias_AB.ensembles_to_ids[ens2]
                 val_A = df_A.loc[idx_A, col_A]
                 val_AB = df_AB.loc[idx_AB, col_AB]
-                assert_equal(val_A, val_AB)
+                assert val_A == val_AB
             for ens2 in ens_B:
                 col_AB = bias_AB.ensembles_to_ids[ens2]
-                assert_equal(np.isnan(df_AB.loc[idx_AB, col_AB]), True)
-            assert_equal(df_A.loc[idx_A, col_A_msouter],
-                         df_AB.loc[idx_AB, col_AB_msouter])
-            assert_equal(df_A.loc[col_A_msouter, idx_A],
-                         df_AB.loc[col_AB_msouter, idx_AB])
+                assert np.isnan(df_AB.loc[idx_AB, col_AB])
+            assert (df_A.loc[idx_A, col_A_msouter]
+                    == df_AB.loc[idx_AB, col_AB_msouter])
+            assert (df_A.loc[col_A_msouter, idx_A]
+                    == df_AB.loc[col_AB_msouter, idx_AB])
 
         for ens1 in ens_B:
             idx_B = bias_B.ensembles_to_ids[ens1]
@@ -220,14 +220,14 @@ class TestBiasEnsembleTable(object):
                 col_AB = bias_AB.ensembles_to_ids[ens2]
                 val_B = df_B.loc[idx_B, col_B]
                 val_AB = df_AB.loc[idx_AB, col_AB]
-                assert_equal(val_B, val_AB)
+                assert val_B == val_AB
             for ens2 in ens_A:
                 col_AB = bias_AB.ensembles_to_ids[ens2]
-                assert_equal(np.isnan(df_AB.loc[idx_AB, col_AB]), True)
-            assert_equal(df_B.loc[idx_B, col_B_msouter],
-                         df_AB.loc[idx_AB, col_AB_msouter])
-            assert_equal(df_B.loc[col_B_msouter, idx_B],
-                         df_AB.loc[col_AB_msouter, idx_AB])
+                assert np.isnan(df_AB.loc[idx_AB, col_AB])
+            assert (df_B.loc[idx_B, col_B_msouter]
+                    == df_AB.loc[idx_AB, col_AB_msouter])
+            assert (df_B.loc[col_B_msouter, idx_B]
+                    == df_AB.loc[col_AB_msouter, idx_AB])
 
         # just to make sure no errors raise when there are NaNs in table
         bias_ABC = bias_A + bias_B + bias_C
@@ -265,18 +265,18 @@ class TestSRTISBiasFromNetwork(object):
         # check reciprocal of symmetric partners
         for i in range(4):
             for j in range(i, 4):
-                assert_equal(bias.dataframe.loc[i, j],
-                             old_div(1.0, bias.dataframe.loc[j, i]))
+                assert (bias.dataframe.loc[i, j]
+                        == old_div(1.0, bias.dataframe.loc[j, i]))
 
         for i in range(len(transition.ensembles) - 1):
             ens_to = transition.ensembles[i]
             ens_from = transition.ensembles[i + 1]
-            assert_equal(bias.bias_value(ens_from, ens_to), 0.5)
+            assert bias.bias_value(ens_from, ens_to) == 0.5
 
         for i in range(len(transition.ensembles) - 2):
             ens_to = transition.ensembles[i]
             ens_from = transition.ensembles[i + 2]
-            assert_equal(bias.bias_value(ens_from, ens_to), 0.25)
+            assert bias.bias_value(ens_from, ens_to) == 0.25
 
     @raises(RuntimeError)
     def test_fail_without_tcp(self):
@@ -342,8 +342,8 @@ class TestSRTISBiasFromNetwork(object):
 
         for ensA in transition_AB.ensembles:
             for ensB in transition_BA.ensembles:
-                assert_equal(np.isnan(bias.bias_value(ensA, ensB)), True)
-                assert_equal(np.isnan(bias.bias_value(ensB, ensA)), True)
+                assert np.isnan(bias.bias_value(ensA, ensB))
+                assert np.isnan(bias.bias_value(ensB, ensA))
 
         assert_almost_equal(bias.bias_value(transition_BA.ensembles[-1],
                                             network.ms_outers[0]),
