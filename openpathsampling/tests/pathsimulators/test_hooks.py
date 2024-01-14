@@ -1,5 +1,5 @@
 from __future__ import absolute_import
-from nose.tools import (assert_equal, assert_not_equal, assert_almost_equal,
+from nose.tools import (assert_not_equal, assert_almost_equal,
                         raises)
 from nose.plugins.skip import Skip, SkipTest
 
@@ -105,7 +105,7 @@ class TestPathSimulatorHook(object):
         sim = TrivialPathSimulator(storage=None)
         sim.attach_hook(hook)
         for k in sim.hook_names:
-            assert_equal(len(sim.hooks[k]), 1)
+            assert len(sim.hooks[k]) == 1
 
     def test_attach_hooks_method(self):
         hook_instance = StupiderHook()
@@ -113,7 +113,7 @@ class TestPathSimulatorHook(object):
         sim.attach_hook(hook_instance.hook_method, hook_for='extra_hook')
         assert_not_equal(hook_instance.foo, "foo")
         sim.run(1)
-        assert_equal(hook_instance.foo, "foo")
+        assert hook_instance.foo == "foo"
 
     def test_trivial_simulation_hooks(self):
         sim = TrivialPathSimulator(storage=None)
@@ -125,19 +125,19 @@ class TestPathSimulatorHook(object):
                                                              "foo")
         sim.attach_hook(extra, hook_for='after_simulation')
         # before running, check that state is as expected
-        assert_equal(stupid.began_simulation, False)
-        assert_equal(stupid.finished_simulation, False)
-        assert_equal(stupid.began_steps, 0)
-        assert_equal(stupid.finished_steps, 0)
+        assert stupid.began_simulation is False
+        assert stupid.finished_simulation is False
+        assert stupid.began_steps == 0
+        assert stupid.finished_steps == 0
         assert_not_equal(stupider.foo, "foo")
         # run
         sim.run(3)
         # check results
-        assert_equal(stupid.began_simulation, True)
-        assert_equal(stupid.finished_simulation, True)
-        assert_equal(stupid.began_steps, 3)
-        assert_equal(stupid.finished_steps, 3)
-        assert_equal(stupider.foo, "foo")
+        assert stupid.began_simulation is True
+        assert stupid.finished_simulation is True
+        assert stupid.began_steps == 3
+        assert stupid.finished_steps == 3
+        assert stupider.foo == "foo"
 
     @raises(TypeError)
     def test_bad_extra_hook_method(self):
@@ -158,15 +158,15 @@ class TestPathSimulatorHook(object):
         sim.attach_hook(stupid.before_simulation,
                         hook_for='before_simulation')
         sim.attach_hook(stupider.hook_method, hook_for='extra_hook')
-        assert_equal(len(sim.hooks), len(sim.hook_names))
+        assert len(sim.hooks) == len(sim.hook_names)
         for hook in sim.hooks:
-            assert_equal(len(sim.hooks[hook]), 1)
+            assert len(sim.hooks[hook]) == 1
 
-        assert_equal(stupid.began_simulation, False)
+        assert stupid.began_simulation is False
         assert_not_equal(stupider.foo, "foo")
         sim.run(1)
-        assert_equal(stupid.began_simulation, True)
-        assert_equal(stupider.foo, "foo")
+        assert stupid.began_simulation is True
+        assert stupider.foo == "foo"
 
 
 class TestSelfOrSimProperty(object):
