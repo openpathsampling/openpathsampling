@@ -1,6 +1,6 @@
 from __future__ import absolute_import
 from builtins import object
-from nose.tools import (assert_equal, assert_not_equal, raises,
+from nose.tools import (assert_not_equal, raises,
                         assert_almost_equal)
 from nose.plugins.skip import SkipTest
 from numpy.testing import assert_array_almost_equal
@@ -85,7 +85,7 @@ class TestChannelAnalysis(object):
 
         new_store = paths.Storage(data_filename('test.nc'), 'r')
         reloaded = storage.tag['analyzer']
-        assert_equal(reloaded._results, self.toy_results)
+        assert reloaded._results == self.toy_results
 
         if os.path.isfile(data_filename('test.nc')):
             os.remove(data_filename('test.nc'))
@@ -96,8 +96,8 @@ class TestChannelAnalysis(object):
             paths.MCStep(mccycle=1, active=self.decr_1)
         ]
         results = paths.ChannelAnalysis(steps, self.channels)
-        assert_equal(results._results,
-                     {'incr': [(0,1)], 'decr': [(1,2)], None: []})
+        expected = {'incr': [(0,1)], 'decr': [(1,2)], None: []}
+        assert results._results == expected
 
     def test_analyze_incr_incr(self):
         steps = [
@@ -105,8 +105,7 @@ class TestChannelAnalysis(object):
             paths.MCStep(mccycle=1, active=self.incr_2)
         ]
         results = paths.ChannelAnalysis(steps, self.channels)
-        assert_equal(results._results,
-                     {'incr': [(0,2)], 'decr': [], None: []})
+        assert results._results =={'incr': [(0,2)], 'decr': [], None: []}
 
     def test_analyze_incr_both_decr(self):
         steps = [
@@ -116,8 +115,8 @@ class TestChannelAnalysis(object):
             paths.MCStep(mccycle=3, active=self.decr_1)
         ]
         results = paths.ChannelAnalysis(steps, self.channels)
-        assert_equal(results._results,
-                     {'incr': [(0,3)], 'decr': [(1,4)], None: []})
+        expected = {'incr': [(0,3)], 'decr': [(1,4)], None: []}
+        assert results._results == expected
 
     def test_analyze_incr_both_incr(self):
         steps = [
@@ -126,8 +125,8 @@ class TestChannelAnalysis(object):
             paths.MCStep(mccycle=2, active=self.incr_2)
         ]
         results = paths.ChannelAnalysis(steps, self.channels)
-        assert_equal(results._results,
-                     {'incr': [(0,3)], 'decr': [(1,2)], None: []})
+        expected = {'incr': [(0,3)], 'decr': [(1,2)], None: []}
+        assert results._results == expected
 
     def test_analyze_incr_same_decr(self):
         steps = [
@@ -136,8 +135,8 @@ class TestChannelAnalysis(object):
             paths.MCStep(mccycle=2, active=self.incr_2)
         ]
         results = paths.ChannelAnalysis(steps, self.channels)
-        assert_equal(results._results,
-                     {'incr': [(0,3)], 'decr': [], None: []})
+        expected = {'incr': [(0,3)], 'decr': [], None: []}
+        assert results._results == expected
 
     def test_analyze_incr_none_incr(self):
         steps = [
@@ -146,8 +145,8 @@ class TestChannelAnalysis(object):
             paths.MCStep(mccycle=2, active=self.incr_2)
         ]
         results = paths.ChannelAnalysis(steps, self.channels)
-        assert_equal(results._results,
-                     {'incr': [(0,1), (2,3)], 'decr': [], None: [(1,2)]})
+        expected = {'incr': [(0,1), (2,3)], 'decr': [], None: [(1,2)]}
+        assert results._results == expected
 
     def test_analyze_incr_none_decr(self):
         steps = [
@@ -156,73 +155,78 @@ class TestChannelAnalysis(object):
             paths.MCStep(mccycle=2, active=self.decr_1)
         ]
         results = paths.ChannelAnalysis(steps, self.channels)
-        assert_equal(results._results,
-                     {'incr': [(0,1)], 'decr': [(2,3)], None: [(1,2)]})
+        expected = {'incr': [(0,1)], 'decr': [(2,3)], None: [(1,2)]}
+        assert results._results == expected
 
     def test_expand_results(self):
         expanded = paths.ChannelAnalysis._expand_results(self.toy_results)
-        assert_equal(expanded, self.toy_expanded_results)
+        assert expanded == self.toy_expanded_results
 
     def test_labels_by_step_newest(self):
         test_set = self.toy_expanded_results
         relabeled = paths.ChannelAnalysis._labels_by_step_newest(test_set)
-        assert_equal(relabeled, [(0, 3, self.set_a), (3, 7, self.set_b),
-                                 (7, 8, self.set_c), (8, 10, self.set_a)])
+        expected = [(0, 3, self.set_a), (3, 7, self.set_b),
+                    (7, 8, self.set_c), (8, 10, self.set_a)]
+        assert relabeled == expected
 
         test_set = self.expanded_results_simultaneous_ending
         relabeled = paths.ChannelAnalysis._labels_by_step_newest(test_set)
-        assert_equal(relabeled, [(0, 3, self.set_a), (3, 7, self.set_b),
-                                 (7, 8, self.set_c), (8, 10, self.set_a)])
+        expected =  [(0, 3, self.set_a), (3, 7, self.set_b),
+                     (7, 8, self.set_c), (8, 10, self.set_a)]
+        assert relabeled == expected
 
     def test_labels_by_step_oldest(self):
         test_set = self.toy_expanded_results
         relabeled = paths.ChannelAnalysis._labels_by_step_oldest(test_set)
-        assert_equal(relabeled, [(0, 5, self.set_a), (5, 9, self.set_b),
-                                 (9, 10, self.set_a)])
+        expected = [(0, 5, self.set_a), (5, 9, self.set_b),
+                    (9, 10, self.set_a)]
+        assert relabeled == expected
 
         test_set = self.expanded_results_simultaneous_ending
         relabeled = paths.ChannelAnalysis._labels_by_step_oldest(test_set)
-        assert_equal(relabeled, [(0, 5, self.set_a), (5, 9, self.set_b),
-                                 (9, 10, self.set_c)])
+        expected = [(0, 5, self.set_a), (5, 9, self.set_b),
+                    (9, 10, self.set_c)]
+        assert relabeled == expected
 
         test_set = self.expanded_oldest_skips_internal
         relabeled = paths.ChannelAnalysis._labels_by_step_oldest(test_set)
-        assert_equal(relabeled, [(0, 5, self.set_a), (5, 9, self.set_b),
-                                 (9, 10, self.set_a), (10, 11, self.set_b)])
+        expected = [(0, 5, self.set_a), (5, 9, self.set_b),
+                    (9, 10, self.set_a), (10, 11, self.set_b)]
+        assert relabeled == expected
 
 
     def test_labels_by_step_multiple(self):
         test_set = self.toy_expanded_results
         relabeled = paths.ChannelAnalysis._labels_by_step_multiple(test_set)
-        assert_equal(relabeled,
-                     [(0, 3, self.set_a),
-                      (3, 5, self.set_a | self.set_b),
-                      (5, 7, self.set_b),
-                      (7, 8, self.set_b | self.set_c),
-                      (8, 9, self.set_b | self.set_c | self.set_a),
-                      (9, 10, self.set_a)])
+        expected = [(0, 3, self.set_a),
+                    (3, 5, self.set_a | self.set_b),
+                    (5, 7, self.set_b),
+                    (7, 8, self.set_b | self.set_c),
+                    (8, 9, self.set_b | self.set_c | self.set_a),
+                    (9, 10, self.set_a)]
+        assert relabeled == expected
 
     def test_empty(self):
         obj = paths.ChannelAnalysis(steps=None, channels=self.channels)
         empty_results = {c: [] for c in list(self.channels.keys()) + [None]}
-        assert_equal(obj._results, empty_results)
+        assert obj._results == empty_results
 
     def test_treat_multiples(self):
         obj = paths.ChannelAnalysis(steps=None, channels=self.channels)
-        assert_equal(obj.treat_multiples, 'all')
+        assert obj.treat_multiples == 'all'
         obj.treat_multiples = 'oldest'
-        assert_equal(obj.treat_multiples, 'oldest')
+        assert obj.treat_multiples == 'oldest'
         obj.treat_multiples = 'newest'
-        assert_equal(obj.treat_multiples, 'newest')
+        assert obj.treat_multiples == 'newest'
         obj.treat_multiples = 'multiple'
-        assert_equal(obj.treat_multiples, 'multiple')
+        assert obj.treat_multiples == 'multiple'
         obj.treat_multiples = 'all'
-        assert_equal(obj.treat_multiples, 'all')
+        assert obj.treat_multiples == 'all'
 
     @raises(ValueError)
     def test_bad_treat_multiples(self):
         obj = paths.ChannelAnalysis(steps=None, channels=self.channels)
-        assert_equal(obj.treat_multiples, 'all')
+        assert obj.treat_multiples == 'all'
         obj.treat_multiples = 'bad_string'
 
     def test_labels_as_sets_sort_function(self):
@@ -232,7 +236,7 @@ class TestChannelAnalysis(object):
         sorted_set_list = sorted(inp_list, key=sort_key)
         sorted_labels = [paths.ChannelAnalysis.label_to_string(e)
                          for e in sorted_set_list]
-        assert_equal(sorted_labels, ['a', 'b', 'c'])
+        assert sorted_labels == ['a', 'b', 'c']
 
         inp_list = [self.set_a, self.set_a | self.set_b, self.set_b,
                     self.set_c | self.set_b,
@@ -240,7 +244,7 @@ class TestChannelAnalysis(object):
         sorted_set_list = sorted(inp_list, key=sort_key)
         sorted_labels = [paths.ChannelAnalysis.label_to_string(e)
                          for e in sorted_set_list]
-        assert_equal(sorted_labels, ['a', 'b', 'a,b', 'b,c', 'a,b,c'])
+        assert sorted_labels == ['a', 'b', 'a,b', 'b,c', 'a,b,c']
 
     def test_labels_sort_function_with_none(self):
         sort_key = paths.ChannelAnalysis._labels_as_sets_sort_function
@@ -248,7 +252,7 @@ class TestChannelAnalysis(object):
         sorted_set_list = sorted(inp_list, key=sort_key)
         sorted_labels = [paths.ChannelAnalysis.label_to_string(e)
                          for e in sorted_set_list]
-        assert_equal(sorted_labels, ['None', 'a', 'b'])
+        assert sorted_labels == ['None', 'a', 'b']
 
     def test_switching(self):
         analysis = paths.ChannelAnalysis(steps=None, channels=self.channels)
@@ -299,28 +303,28 @@ class TestChannelAnalysis(object):
 
         analysis.treat_multiples = 'newest'
         residence_times = analysis.residence_times
-        assert_equal(residence_times, {'a': [3, 2], 'b': [4], 'c': [1]})
+        assert residence_times == {'a': [3, 2], 'b': [4], 'c': [1]}
 
         analysis.treat_multiples = 'oldest'
         residence_times = analysis.residence_times
-        assert_equal(residence_times, {'a': [5, 1], 'b': [4]})
+        assert residence_times == {'a': [5, 1], 'b': [4]}
 
         analysis.treat_multiples = 'all'
         residence_times = analysis.residence_times
-        assert_equal(residence_times, {'a': [5, 2], 'b': [6], 'c': [2]})
+        assert residence_times == {'a': [5, 2], 'b': [6], 'c': [2]}
 
         analysis.treat_multiples = 'multiple'
         residence_times = analysis.residence_times
-        assert_equal(residence_times, {'a': [3, 1], 'b': [2], 'a,b': [2],
-                                       'b,c': [1], 'a,b,c': [1]})
+        assert residence_times == {
+            'a': [3, 1], 'b': [2], 'a,b': [2], 'b,c': [1], 'a,b,c': [1]
+        }
 
     def test_residence_times_with_none(self):
         analysis = paths.ChannelAnalysis(steps=None, channels=self.channels)
         analysis._results = self.results_with_none
 
         residence_times = analysis.residence_times
-        assert_equal(residence_times,
-                     {'a': [2, 3], 'b': [2, 1], 'None': [3]})
+        assert residence_times == {'a': [2, 3], 'b': [2, 1], 'None': [3]}
 
     def test_total_time(self):
         analysis = paths.ChannelAnalysis(steps=None, channels=self.channels)
@@ -328,28 +332,27 @@ class TestChannelAnalysis(object):
 
         analysis.treat_multiples = 'newest'
         total_time = analysis.total_time
-        assert_equal(total_time, {'a': 5, 'b': 4, 'c': 1})
+        assert total_time == {'a': 5, 'b': 4, 'c': 1}
 
         analysis.treat_multiples = 'oldest'
         total_time = analysis.total_time
-        assert_equal(total_time, {'a': 6, 'b': 4})
-        assert_equal(total_time['c'], 0)
+        assert total_time == {'a': 6, 'b': 4}
+        assert total_time['c'] == 0
 
         analysis.treat_multiples = 'all'
         total_time = analysis.total_time
-        assert_equal(total_time, {'a': 7, 'b': 6, 'c': 2})
+        assert total_time == {'a': 7, 'b': 6, 'c': 2}
 
         analysis.treat_multiples = 'multiple'
         total_time = analysis.total_time
-        assert_equal(total_time, {'a': 4, 'b': 2, 'a,b': 2, 'b,c': 1,
-                                  'a,b,c': 1})
+        assert total_time == {'a': 4, 'b': 2, 'a,b': 2, 'b,c': 1, 'a,b,c': 1}
 
     def test_total_time_with_none(self):
         analysis = paths.ChannelAnalysis(steps=None, channels=self.channels)
         analysis._results = self.results_with_none
 
         total_time = analysis.total_time
-        assert_equal(total_time, {'a': 5, 'b': 3, 'None': 3})
+        assert total_time == {'a': 5, 'b': 3, 'None': 3}
 
 
     def test_status(self):
@@ -357,25 +360,25 @@ class TestChannelAnalysis(object):
         analysis._results = self.toy_results
 
         analysis.treat_multiples = 'newest'
-        assert_equal(analysis.status(4), 'b')
-        assert_equal(analysis.status(8), 'a')
+        assert analysis.status(4) == 'b'
+        assert analysis.status(8) == 'a'
 
         analysis.treat_multiples = 'oldest'
-        assert_equal(analysis.status(4), 'a')
-        assert_equal(analysis.status(8), 'b')
+        assert analysis.status(4) == 'a'
+        assert analysis.status(8) == 'b'
 
         analysis.treat_multiples = 'multiple'
-        assert_equal(analysis.status(4), 'a,b')
-        assert_equal(analysis.status(8), 'a,b,c')
+        assert analysis.status(4) == 'a,b'
+        assert analysis.status(8) == 'a,b,c'
 
         analysis.treat_multiples = 'all'
-        assert_equal(analysis.status(4), 'a,b')
-        assert_equal(analysis.status(8), 'a,b,c')
+        assert analysis.status(4) == 'a,b'
+        assert analysis.status(8) == 'a,b,c'
 
     def test_status_with_none(self):
         analysis = paths.ChannelAnalysis(steps=None, channels=self.channels)
         analysis._results = self.results_with_none
-        assert_equal(analysis.status(4), 'None')
+        assert analysis.status(4) == 'None'
 
     @raises(RuntimeError)
     def test_bad_status_number(self):

@@ -2,7 +2,7 @@ from __future__ import division
 from __future__ import absolute_import
 from builtins import object
 from past.utils import old_div
-from nose.tools import (assert_equal, assert_not_equal, raises,
+from nose.tools import (assert_not_equal, raises,
                         assert_almost_equal)
 from nose.plugins.skip import SkipTest
 from .test_helpers import assert_items_almost_equal, assert_items_equal
