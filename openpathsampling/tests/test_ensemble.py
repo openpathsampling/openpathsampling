@@ -4,7 +4,7 @@ from builtins import map
 from builtins import str
 from builtins import range
 from builtins import object
-from nose.tools import (assert_equal, assert_not_equal, raises, assert_true,
+from nose.tools import (assert_not_equal, raises, assert_true,
                         assert_false)
 from nose.plugins.skip import SkipTest
 from .test_helpers import (CallIdentity, prepend_exception_message,
@@ -45,9 +45,9 @@ def wrap_traj(traj, start, length):
 def test_wrap_traj():
     """Testing wrap_traj (oh gods, the meta! a test for a test function!)"""
     intraj = [1, 2, 3]
-    assert_equal(wrap_traj(intraj, 3, 6), [1, 1, 1, 1, 2, 3])
-    assert_equal(wrap_traj(intraj, 3, 8), [1, 1, 1, 1, 2, 3, 3, 3])
-    assert_equal(wrap_traj(intraj, 3, 8)[slice(3, 6)], intraj)
+    assert wrap_traj(intraj, 3, 6) == [1, 1, 1, 1, 2, 3]
+    assert wrap_traj(intraj, 3, 8) == [1, 1, 1, 1, 2, 3, 3, 3]
+    assert wrap_traj(intraj, 3, 8)[slice(3, 6)] == intraj
 
 def build_trajdict(trajtypes, lower, upper):
     upperadddict = {'a' : 'in', 'b' : 'out', 'c' : 'cross', 'o' : 'hit'}
@@ -143,7 +143,7 @@ def in_out_parser(testname):
 class EnsembleTest(object):
     def _single_test(self, ensemble_fcn, traj, res, failmsg):
         try:
-            assert_equal(ensemble_fcn(traj), res)
+            assert ensemble_fcn(traj) == res
         except AssertionError as e:
             prepend_exception_message(e, failmsg)
             raise
@@ -232,14 +232,14 @@ class TestPartOutXEnsemble(EnsembleTest):
 
     def test_leaveX_0(self):
         """PartOutXEnsemble treatment of zero-length trajectory"""
-        assert_equal(self.leaveX(paths.Trajectory([])), False)
-        assert_equal(self.leaveX.can_append(paths.Trajectory([])), True)
-        assert_equal(self.leaveX.can_prepend(paths.Trajectory([])), True)
+        assert self.leaveX(paths.Trajectory([])) is False
+        assert self.leaveX.can_append(paths.Trajectory([])) is True
+        assert self.leaveX.can_prepend(paths.Trajectory([])) is True
 
     def test_leaveX_str(self):
         volstr = "{x|Id(x) in [0.1, 0.5]}"
-        assert_equal(self.leaveX.__str__(),
-                     "exists t such that x[t] in (not "+volstr+")")
+        expected_str = "exists t such that x[t] in (not "+volstr+")"
+        assert self.leaveX.__str__() == expected_str
 
 class TestAllInXEnsemble(EnsembleTest):
     def setup_method(self):
@@ -296,9 +296,9 @@ class TestAllInXEnsemble(EnsembleTest):
 
     def test_inX_0(self):
         """AllInXEnsemble treatment of zero-length trajectory"""
-        assert_equal(self.inX(paths.Trajectory([])), False)
-        assert_equal(self.inX.can_append(paths.Trajectory([])), True)
-        assert_equal(self.inX.can_prepend(paths.Trajectory([])), True)
+        assertself.inX(paths.Trajectory([])) is False
+        assertself.inX.can_append(paths.Trajectory([])) is True
+        assertself.inX.can_prepend(paths.Trajectory([])) is True
 
     def test_inX_str(self):
         volstr = "{x|Id(x) in [0.1, 0.5]}"
