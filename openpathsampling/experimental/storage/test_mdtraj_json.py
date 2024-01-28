@@ -10,7 +10,7 @@ from ..simstore.test_custom_json import CustomJSONCodingTest
 from openpathsampling.tests.test_helpers import data_filename
 
 class MDTrajCodingTest(CustomJSONCodingTest):
-    def setup(self):
+    def setup_method(self):
         if not HAS_MDTRAJ:
             pytest.skip()
 
@@ -36,8 +36,8 @@ class MDTrajCodingTest(CustomJSONCodingTest):
 
 
 class TestTopologyCoding(MDTrajCodingTest):
-    def setup(self):
-        super(TestTopologyCoding, self).setup()
+    def setup_method(self):
+        super(TestTopologyCoding, self).setup_method()
         self.codec = top_codec
         top = md.load(self.filename).topology
         dataframe, bonds = top.to_dataframe()
@@ -51,8 +51,8 @@ class TestTopologyCoding(MDTrajCodingTest):
 
 
 class TestTrajectoryCoding(MDTrajCodingTest):
-    def setup(self):
-        super(TestTrajectoryCoding, self).setup()
+    def setup_method(self):
+        super(TestTrajectoryCoding, self).setup_method()
         self.codec = traj_codec
         traj = md.load(self.filename)
         self.objs = [traj]

@@ -58,7 +58,7 @@ class MockBackend(object):
 
 
 class TestSnapshotsTable(object):
-    def setup(self):
+    def setup_method(self):
         self.engine_1 = make_engine()
         self.engine_2 = make_engine()
         snap_1_0 = toys.Snapshot(coordinates=np.array([0.0, 0.0]),
