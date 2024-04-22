@@ -1,9 +1,5 @@
 import pytest
 import numpy.testing as npt
-from nose.tools import (assert_not_equal, assert_almost_equal,
-                        raises, assert_true)
-from nose.plugins.skip import Skip, SkipTest
-import numpy.testing as npt
 import tempfile
 
 from .test_helpers import data_filename, assert_items_equal
@@ -113,14 +109,14 @@ class TestGromacsEngine(object):
         # when the frame is present, we should return it
         fname = os.path.join(self.test_dir, "project_trr", "0000000.trr")
         result = self.engine.read_frame_from_file(fname, 0)
-        assert_true(isinstance(result, ExternalMDSnapshot))
+        assert isinstance(result, ExternalMDSnapshot)
         assert result.file_name == fname
         assert result.file_position == 0
         # TODO: add caching of xyz, vel, box; check that we have it now
 
         fname = os.path.join(self.test_dir, "project_trr", "0000000.trr")
         result = self.engine.read_frame_from_file(fname, 3)
-        assert_true(isinstance(result, ExternalMDSnapshot))
+        assert isinstance(result, ExternalMDSnapshot)
         assert result.file_name == fname
         assert result.file_position == 3
 
@@ -128,7 +124,7 @@ class TestGromacsEngine(object):
         # if a frame is partial, return 'partial'
         fname = os.path.join(self.test_dir, "project_trr", "0000099.trr")
         frame_2 = self.engine.read_frame_from_file(fname, 49)
-        assert_true(isinstance(frame_2, ExternalMDSnapshot))
+        assert isinstance(frame_2, ExternalMDSnapshot)
         frame_3 = self.engine.read_frame_from_file(fname, 50)
         assert frame_3 == "partial"
 
@@ -244,7 +240,7 @@ class TestGromacsEngine(object):
         ttraj = md.load(self.engine.trajectory_filename(1),
                         top=self.engine.gro)
         # the mdp suggests a max length of 100 frames
-        assert_true(len(ttraj) < 100)
+        assert len(ttraj) < 100
 
     def test_prepare(self):
         if not has_gmx:

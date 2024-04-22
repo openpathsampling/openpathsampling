@@ -1,8 +1,7 @@
 from __future__ import absolute_import
 from builtins import object
-from nose.tools import (assert_not_equal, raises,
-                        assert_almost_equal)
-from nose.plugins.skip import SkipTest
+import pytest
+
 from numpy.testing import assert_array_almost_equal
 from .test_helpers import make_1d_traj, data_filename, assert_items_equal
 
@@ -223,11 +222,11 @@ class TestChannelAnalysis(object):
         obj.treat_multiples = 'all'
         assert obj.treat_multiples == 'all'
 
-    @raises(ValueError)
     def test_bad_treat_multiples(self):
         obj = paths.ChannelAnalysis(steps=None, channels=self.channels)
         assert obj.treat_multiples == 'all'
-        obj.treat_multiples = 'bad_string'
+        with pytest.raises(ValueError):
+            obj.treat_multiples = 'bad_string'
 
     def test_labels_as_sets_sort_function(self):
         sort_key = paths.ChannelAnalysis._labels_as_sets_sort_function
@@ -380,9 +379,9 @@ class TestChannelAnalysis(object):
         analysis._results = self.results_with_none
         assert analysis.status(4) == 'None'
 
-    @raises(RuntimeError)
     def test_bad_status_number(self):
         analysis = paths.ChannelAnalysis(steps=None, channels=self.channels)
         analysis._results = self.toy_results
 
-        analysis.status(10)
+        with pytest.raises(RuntimeError):
+            analysis.status(10)
