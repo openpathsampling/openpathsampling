@@ -1,6 +1,6 @@
 import pytest
 import numpy.testing as npt
-from nose.tools import (assert_equal, assert_not_equal, assert_almost_equal,
+from nose.tools import (assert_not_equal, assert_almost_equal,
                         raises, assert_true)
 from nose.plugins.skip import Skip, SkipTest
 import numpy.testing as npt
@@ -114,15 +114,15 @@ class TestGromacsEngine(object):
         fname = os.path.join(self.test_dir, "project_trr", "0000000.trr")
         result = self.engine.read_frame_from_file(fname, 0)
         assert_true(isinstance(result, ExternalMDSnapshot))
-        assert_equal(result.file_name, fname)
-        assert_equal(result.file_position, 0)
+        assert result.file_name == fname
+        assert result.file_position == 0
         # TODO: add caching of xyz, vel, box; check that we have it now
 
         fname = os.path.join(self.test_dir, "project_trr", "0000000.trr")
         result = self.engine.read_frame_from_file(fname, 3)
         assert_true(isinstance(result, ExternalMDSnapshot))
-        assert_equal(result.file_name, fname)
-        assert_equal(result.file_position, 3)
+        assert result.file_name == fname
+        assert result.file_position == 3
 
     def test_read_frame_from_file_partial(self):
         # if a frame is partial, return 'partial'
@@ -130,13 +130,13 @@ class TestGromacsEngine(object):
         frame_2 = self.engine.read_frame_from_file(fname, 49)
         assert_true(isinstance(frame_2, ExternalMDSnapshot))
         frame_3 = self.engine.read_frame_from_file(fname, 50)
-        assert_equal(frame_3, "partial")
+        assert frame_3 == "partial"
 
     def test_read_frame_from_file_none(self):
         # if a frame is beyond the last frame, return None
         fname = os.path.join(self.test_dir, "project_trr", "0000000.trr")
         result = self.engine.read_frame_from_file(fname, 4)
-        assert_equal(result, None)
+        assert result is None
 
     def test_write_frame_to_file_read_back(self):
         # write random frame; read back
@@ -158,8 +158,8 @@ class TestGromacsEngine(object):
         self.engine.write_frame_to_file(traj_50, snap)
 
         snap2 = self.engine.read_frame_from_file(traj_50, 0)
-        assert_equal(snap2.file_name, traj_50)
-        assert_equal(snap2.file_position, 0)
+        assert snap2.file_name == traj_50
+        assert snap2.file_position == 0
         npt.assert_array_almost_equal(snap.xyz, snap2.xyz)
         npt.assert_array_almost_equal(snap.velocities, snap2.velocities)
         npt.assert_array_almost_equal(snap.box_vectors, snap2.box_vectors)
@@ -176,20 +176,25 @@ class TestGromacsEngine(object):
                 os.path.join(self.test_dir, "initial_frame.trr")
         assert test_engine.output_file == \
                 os.path.join(self.test_dir, "proj_trr", "0000001.trr")
-        assert_equal(test_engine.edr_file,
-                     os.path.join(self.test_dir, "proj_edr", "0000001.edr"))
-        assert_equal(test_engine.log_file,
-                     os.path.join(self.test_dir, "proj_log", "0000001.log"))
+        assert test_engine.edr_file == os.path.join(self.test_dir,
+                                                    "proj_edr",
+                                                    "0000001.edr")
+        assert test_engine.log_file == os.path.join(self.test_dir,
+                                                    "proj_log",
+                                                    "0000001.log")
 
         test_engine.set_filenames(99)
-        assert_equal(test_engine.input_file,
-                     os.path.join(self.test_dir, "initial_frame.trr"))
-        assert_equal(test_engine.output_file,
-                     os.path.join(self.test_dir, "proj_trr", "0000100.trr"))
-        assert_equal(test_engine.edr_file,
-                     os.path.join(self.test_dir, "proj_edr", "0000100.edr"))
-        assert_equal(test_engine.log_file,
-                     os.path.join(self.test_dir, "proj_log", "0000100.log"))
+        assert test_engine.input_file == os.path.join(self.test_dir,
+                                                      "initial_frame.trr")
+        assert test_engine.output_file == os.path.join(self.test_dir,
+                                                       "proj_trr",
+                                                       "0000100.trr")
+        assert test_engine.edr_file == os.path.join(self.test_dir,
+                                                    "proj_edr",
+                                                    "0000100.edr")
+        assert test_engine.log_file == os.path.join(self.test_dir,
+                                                    "proj_log",
+                                                    "0000100.log")
 
     def test_set_filenames_fixed(self):
         test_engine = Engine(gro="conf.gro", mdp="md.mdp", top="topol.top",
@@ -234,8 +239,8 @@ class TestGromacsEngine(object):
 
         ens = paths.LengthEnsemble(5)
         traj = self.engine.generate(snap, running=[ens.can_append])
-        assert_equal(self.engine.proc.is_running(), False)
-        assert_equal(len(traj), 5)
+        assert self.engine.proc.is_running() is False
+        assert len(traj) == 5
         ttraj = md.load(self.engine.trajectory_filename(1),
                         top=self.engine.gro)
         # the mdp suggests a max length of 100 frames
@@ -253,7 +258,7 @@ class TestGromacsEngine(object):
             if os.path.isfile(f):
                 raise AssertionError("File " + str(f) + " already exists!")
 
-        assert_equal(self.engine.prepare(), 0)
+        assert self.engine.prepare() == 0
         for f in files:
             if not os.path.isfile(f):
                 raise AssertionError("File " + str(f) + " was not created!")
