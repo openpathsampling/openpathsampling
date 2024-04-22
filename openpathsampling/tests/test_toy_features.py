@@ -2,8 +2,7 @@ from builtins import object
 import openpathsampling.engines.toy as toys
 import numpy as np
 
-from nose.tools import assert_equal, assert_almost_equal
-from nose.plugins.skip import SkipTest
+from numpy.testing import assert_almost_equal
 import logging
 
 logging.getLogger('openpathsampling.initialization').setLevel(logging.CRITICAL)
@@ -37,8 +36,8 @@ class TestToySnapshotFeatures(object):
                                      engine=engine_6D)
 
     def test_n_degrees_of_freedom(self):
-        assert_equal(self.snap_2D.n_degrees_of_freedom, 2)
-        assert_equal(self.snap_6D.n_degrees_of_freedom, 6)
+        assert self.snap_2D.n_degrees_of_freedom == 2
+        assert self.snap_6D.n_degrees_of_freedom == 6
 
     def test_instantaneous_temperature(self):
         # KE = 0.5 * (1.0*2.0**2 + 1.0*4.0**2) = 10.0

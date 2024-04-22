@@ -4,10 +4,10 @@ from __future__ import absolute_import
 from builtins import range
 from builtins import object
 from past.utils import old_div
-from nose.tools import (assert_not_equal, assert_almost_equal,
-                        raises, assert_in)
 
-from nose.plugins.skip import Skip, SkipTest
+import pytest
+import numpy.testing as npt
+
 from .test_helpers import true_func, assert_equal_array_array, make_1d_traj
 
 import numpy as np
@@ -86,7 +86,7 @@ class TestBiasEnsembleTable(object):
         }
         for change in list(change_vals.keys()):
             test_val = min(1.0, change_vals[change])
-            assert_almost_equal(
+            npt.assert_almost_equal(
                 self.bias.probability_new_to_old(self.sample_set, change),
                 test_val
             )
@@ -106,7 +106,7 @@ class TestBiasEnsembleTable(object):
         }
         for change in list(change_vals.keys()):
             test_val = min(1.0, change_vals[change])
-            assert_almost_equal(
+            npt.assert_almost_equal(
                 self.bias.probability_old_to_new(self.sample_set, change),
                 test_val
             )
@@ -134,13 +134,13 @@ class TestBiasEnsembleTable(object):
         ])
         change_210 = move_210.move(self.sample_set)
 
-        # assert_almost_equal(
+        # npt.assert_almost_equal(
             # self.bias.probability_old_to_new(change_210, self.sample_set), 1.0
         # )
-        # assert_almost_equal(
+        # npt.assert_almost_equal(
             # self.bias.probability_new_to_old(change_210, self.sample_set), 0.2
         # )
-        raise SkipTest
+        pytest.skip()
 
     def test_add_biases(self):
         # this is where we combine multiple biases into one
@@ -182,9 +182,9 @@ class TestBiasEnsembleTable(object):
         # check the ensembles_to_ids
         assert len(bias_AB.ensembles_to_ids) == 7
         for ens in ens_A:
-            assert_in(bias_AB.ensembles_to_ids[ens], [0, 1, 2])
+            assert bias_AB.ensembles_to_ids[ens] in [0, 1, 2]
         for ens in ens_B:
-            assert_in(bias_AB.ensembles_to_ids[ens], [3, 4, 5])
+            assert bias_AB.ensembles_to_ids[ens] in [3, 4, 5]
         assert bias_AB.ensembles_to_ids[ms_outer] == 6
 
         # check values
@@ -278,14 +278,13 @@ class TestSRTISBiasFromNetwork(object):
             ens_from = transition.ensembles[i + 2]
             assert bias.bias_value(ens_from, ens_to) == 0.25
 
-    @raises(RuntimeError)
     def test_fail_without_tcp(self):
         network = paths.MISTISNetwork([
             (self.stateA, self.ifacesA, self.stateB)
         ])
-        bias = paths.SRTISBiasFromNetwork(network)
+        with pytest.raises(RuntimeError):
+            bias = paths.SRTISBiasFromNetwork(network)
 
-    @raises(RuntimeError)
     def test_fail_without_lambdas(self):
         fake_ifaceA = paths.InterfaceSet(cv=self.ifacesA.cv,
                                          volumes=self.ifacesA.volumes,
@@ -294,7 +293,8 @@ class TestSRTISBiasFromNetwork(object):
             (self.stateA, fake_ifaceA, self.stateB)
         ])
         network.sampling_transitions[0].tcp = self.tcp_A
-        bias = paths.SRTISBiasFromNetwork(network)
+        with pytest.raises(RuntimeError):
+            bias = paths.SRTISBiasFromNetwork(network)
 
     def test_bias_from_ms_network(self):
         ms_outer = paths.MSOuterTISInterface.from_lambdas(
@@ -333,27 +333,26 @@ class TestSRTISBiasFromNetwork(object):
         for i in range(len(transition_AB.ensembles) - 1):
             ens_to = transition_AB.ensembles[i]
             ens_from = transition_AB.ensembles[i + 1]
-            assert_almost_equal(bias.bias_value(ens_from, ens_to), 0.5)
+            npt.assert_almost_equal(bias.bias_value(ens_from, ens_to), 0.5)
 
         for i in range(len(transition_BA.ensembles) - 1):
             ens_to = transition_BA.ensembles[i]
             ens_from = transition_BA.ensembles[i + 1]
-            assert_almost_equal(bias.bias_value(ens_from, ens_to), 0.2)
+            npt.assert_almost_equal(bias.bias_value(ens_from, ens_to), 0.2)
 
         for ensA in transition_AB.ensembles:
             for ensB in transition_BA.ensembles:
                 assert np.isnan(bias.bias_value(ensA, ensB))
                 assert np.isnan(bias.bias_value(ensB, ensA))
 
-        assert_almost_equal(bias.bias_value(transition_BA.ensembles[-1],
-                                            network.ms_outers[0]),
+        npt.assert_almost_equal(bias.bias_value(transition_BA.ensembles[-1],
+                                                network.ms_outers[0]),
                             old_div(5.0, 2))
-        assert_almost_equal(bias.bias_value(transition_AB.ensembles[-1],
-                                            network.ms_outers[0]),
+        npt.assert_almost_equal(bias.bias_value(transition_AB.ensembles[-1],
+                                                network.ms_outers[0]),
                             old_div(2.0, 2))
 
 
 
 
-
-        raise SkipTest
+        pytest.skip()

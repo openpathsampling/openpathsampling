@@ -1,6 +1,5 @@
 from __future__ import absolute_import
 from builtins import object
-from nose.plugins.skip import Skip, SkipTest
 from .test_helpers import (
     true_func, assert_equal_array_array, make_1d_traj, data_filename,
     assert_items_equal
