@@ -38,20 +38,17 @@ class SelectorTest(object):
 
 class TestSpringShootingSelector(SelectorTest):
 
-    @staticmethod
-    def test_neg_delta():
+    def test_neg_delta(self):
         with pytest.raises(ValueError):
             SpringShootingSelector(delta_max=-1,
                                    k_spring=0.1)
 
-    @staticmethod
-    def test_0_delta():
+    def test_0_delta(self):
         with pytest.raises(ValueError):
             SpringShootingSelector(delta_max=0,
                                    k_spring=0.1)
 
-    @staticmethod
-    def test_pos_delta():
+    def test_pos_delta(self):
         delta_max = 1
         sel = SpringShootingSelector(delta_max=delta_max,
                                      k_spring=0.1)
@@ -59,14 +56,12 @@ class TestSpringShootingSelector(SelectorTest):
         assert len(sel._fw_prob_list) == 2*delta_max+1
         assert len(sel._bw_prob_list) == 2*delta_max+1
 
-    @staticmethod
-    def test_neg_k():
+    def test_neg_k(self):
         with pytest.raises(ValueError):
             SpringShootingSelector(delta_max=1,
                                    k_spring=-1)
 
-    @staticmethod
-    def test_0_k():
+    def test_0_k(self):
         sel = SpringShootingSelector(delta_max=1,
                                      k_spring=0)
         ref_list = [1.0, 1.0, 1.0]
@@ -74,22 +69,19 @@ class TestSpringShootingSelector(SelectorTest):
         assert sel._fw_prob_list == ref_list
         assert sel._bw_prob_list == ref_list
 
-    @staticmethod
-    def test_pos_k():
+    def test_pos_k(self):
         sel = SpringShootingSelector(delta_max=1,
                                      k_spring=1)
         assert sel.k_spring == 1
 
-    @staticmethod
-    def test_sanity_breaking_fw():
+    def test_sanity_breaking_fw(self):
         sel = SpringShootingSelector(delta_max=1,
                                      k_spring=1)
         sel._fw_prob_list = [0, 0, 0]
         with pytest.raises(RuntimeError):
             sel.check_sanity()
 
-    @staticmethod
-    def test_sanity_breaking_bw():
+    def test_sanity_breaking_bw(self):
         sel = SpringShootingSelector(delta_max=1,
                                      k_spring=1)
         sel._bw_prob_list = [0, 0, 0]
@@ -97,16 +89,14 @@ class TestSpringShootingSelector(SelectorTest):
         with pytest.raises(RuntimeError):
             sel.check_sanity()
 
-    @staticmethod
-    def test_sanity_breaking_total():
+    def test_sanity_breaking_total(self):
         sel = SpringShootingSelector(delta_max=1,
                                      k_spring=1)
         sel._total_bias = sum([0, 0, 0])
         with pytest.raises(RuntimeError):
             sel.check_sanity()
 
-    @staticmethod
-    def test_probability_ratio():
+    def test_probability_ratio(self):
         sel = SpringShootingSelector(delta_max=1,
                                      k_spring=1)
         sel._acceptable_snapshot = True
@@ -141,8 +131,7 @@ class TestSpringShootingSelector(SelectorTest):
         with pytest.raises(RuntimeError):
             sel.pick(trajectory=self.mytraj, direction='forward')
 
-    @staticmethod
-    def test_initial_guess():
+    def test_initial_guess(self):
         sel = SpringShootingSelector(delta_max=1, k_spring=1, initial_guess=12)
         assert sel.trial_snapshot == 12
         assert sel.previous_snapshot == 12
@@ -272,16 +261,14 @@ class TestSpringShootingSelector(SelectorTest):
         assert sel.previous_snapshot == self.initial_guess
         assert sel._acceptable_snapshot is False
 
-    @staticmethod
-    def test_failed_loading():
+    def test_failed_loading(self):
         sel = SpringShootingSelector(delta_max=1, k_spring=0, initial_guess=3)
         details = Details(foo='bar')
         step = FakeStep(details)
         with pytest.raises(RuntimeError):
             sel.restart_from_step(step)
 
-    @staticmethod
-    def test_correct_loading():
+    def test_correct_loading(self):
         sel = SpringShootingSelector(delta_max=1, k_spring=0, initial_guess=3)
         details = Details(initial_trajectory='foo',
                           last_accepted_shooting_index='bar',
@@ -413,8 +400,7 @@ class TestSpringShootingMover(MoverTest):
 
 
 class TestSpringShootingStrategy(MoveStrategyTestSetup):
-    @staticmethod
-    def test_init():
+    def test_init(self):
         strategy = SpringShootingStrategy(delta_max=1, k_spring=0.0,
                                           initial_guess=3)
         assert strategy.delta_max == 1
