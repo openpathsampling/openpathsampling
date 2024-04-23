@@ -1,9 +1,8 @@
 from __future__ import absolute_import
 from builtins import hex
 from builtins import object
-from nose.tools import raises
 
-from nose.plugins.skip import SkipTest
+import pytest
 from .test_helpers import u
 
 import logging
@@ -42,7 +41,7 @@ class TestFeatures(object):
 
     def test_copy_with_replacement_openmm(self):
         if not paths.integration_tools.HAS_OPENMM or omt is None:
-            raise SkipTest
+            pytest.skip()
         # test an openmm snapshot
         sys = omt.testsystems.AlanineDipeptideVacuum()
         omm_snap = omm_engine.snapshot_from_testsystem(sys)
@@ -63,10 +62,10 @@ class TestFeatures(object):
         assert(hex(id(omm_snap.kinetics)) == hex(id(omm_copy.kinetics)))
         assert(hex(id(omm_snap.statics)) != hex(id(omm_copy.statics)))
 
-    @raises(TypeError)
     def test_parameter_error(self):
         init_coord = np.array([1.0, 2.0])
         init_vel = np.array([3.0, 4.0])
         toy_snap = toy_engine.Snapshot(
             coordinates=init_coord, velocities=init_vel)
-        toy_snap.copy_with_replacement(dummy=0)
+        with pytest.raises(TypeError):
+            toy_snap.copy_with_replacement(dummy=0)

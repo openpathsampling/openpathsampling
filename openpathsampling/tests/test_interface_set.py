@@ -2,9 +2,8 @@ from __future__ import absolute_import
 from builtins import zip
 from builtins import range
 from builtins import object
-from nose.tools import (assert_not_equal, assert_almost_equal,
-                        raises)
-from nose.plugins.skip import Skip, SkipTest
+
+import pytest
 from .test_helpers import (
     true_func, assert_equal_array_array, make_1d_traj, data_filename,
     assert_items_equal
@@ -97,10 +96,10 @@ class TestGenericVolumeInterfaceSet(object):
         assert (([-0.1, -0.1], [0.1, 0.1], 0) \
                  == sanitize([-0.1, -0.1], [0.1, 0.1]))
 
-    @raises(RuntimeError)
     def test_bad_sanitize(self):
-        GenericVolumeInterfaceSet._sanitize_input([0.0, -0.1],
-                                                  [0.1, 0.2, 0.3])
+        with pytest.raises(RuntimeError):
+            GenericVolumeInterfaceSet._sanitize_input([0.0, -0.1],
+                                                      [0.1, 0.2, 0.3])
 
 
 class TestVolumeInterfaceSet(object):
@@ -140,9 +139,9 @@ class TestVolumeInterfaceSet(object):
         expected = paths.CVDefinedVolume(self.cv, float("-inf"), 0.25)
         assert expected == new_iface
 
-    @raises(TypeError)
     def test_bad_new_interface(self):
-        self.weird_set.new_interface(0.25)
+        with pytest.raises(TypeError):
+            self.weird_set.new_interface(0.25)
 
     def test_storage(self):
         import os
