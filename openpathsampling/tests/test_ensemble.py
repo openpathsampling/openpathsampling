@@ -4,9 +4,7 @@ from builtins import map
 from builtins import str
 from builtins import range
 from builtins import object
-from nose.tools import (assert_not_equal, raises, assert_true,
-                        assert_false)
-from nose.plugins.skip import SkipTest
+import pytest
 from .test_helpers import (CallIdentity, prepend_exception_message,
                           make_1d_traj, raises_with_message_like,
                           CalvinistDynamics)
@@ -433,20 +431,22 @@ class TestSequentialEnsemble(EnsembleTest):
             self.inX & self.length1,
         ])
 
-    @raises(ValueError)
     def test_maxminoverlap_size(self):
         """SequentialEnsemble errors if max/min overlap sizes different"""
-        SequentialEnsemble([self.inX, self.outX, self.inX], (0,0), (0,0,0))
+        with pytest.raises(ValueError):
+            SequentialEnsemble([self.inX, self.outX, self.inX],
+                               (0,0), (0,0,0))
 
-    @raises(ValueError)
     def test_maxoverlap_ensemble_size(self):
         """SequentialEnsemble errors if overlap sizes don't match ensemble size"""
-        SequentialEnsemble([self.inX, self.outX, self.inX], (0,0,0), (0,0,0))
+        with pytest.raises(ValueError):
+            SequentialEnsemble([self.inX, self.outX, self.inX],
+                               (0,0,0), (0,0,0))
 
-    @raises(ValueError)
     def test_minmax_order(self):
         """SequentialEnsemble errors if min_overlap > max_overlap"""
-        SequentialEnsemble([self.inX, self.outX, self.inX], (0,1), (0,0))
+        with pytest.raises(ValueError):
+            SequentialEnsemble([self.inX, self.outX, self.inX], (0,1), (0,0))
 
     def test_allowed_initializations(self):
         """SequentialEnsemble initializes correctly with defaults"""
@@ -460,23 +460,23 @@ class TestSequentialEnsemble(EnsembleTest):
 
     def test_overlap_max(self):
         """SequentialEnsemble allows overlaps up to overlap max, no more"""
-        raise SkipTest
+        pytest.skip()
 
     def test_overlap_min(self):
         """SequentialEnsemble requires overlaps of at least overlap min"""
-        raise SkipTest
+        pytest.skip()
 
     def test_overlap_max_inf(self):
         """SequentialEnsemble works if max overlap in infinite"""
-        raise SkipTest
+        pytest.skip()
 
     def test_overlap_min_gap(self):
         """SequentialEnsemble works in mix overlap is negative (gap)"""
-        raise SkipTest
+        pytest.skip()
 
     def test_overlap_max_gap(self):
         """SequentialEnsemble works if max overlap is negative (gap)"""
-        raise SkipTest
+        pytest.skip()
 
     def test_seqens_order_combo(self):
         # regression test for #229
@@ -919,7 +919,7 @@ class TestSequentialEnsemble(EnsembleTest):
     def test_sequential_enter_exit(self):
         """SequentialEnsembles based on Enters/ExitsXEnsemble"""
         # TODO: this includes a test of the overlap ability
-        raise SkipTest
+        pytest.skip()
 
 
 
@@ -1435,10 +1435,10 @@ class TestSequentialEnsembleCache(EnsembleCacheTest):
         assert self.pseudo_minus(self.traj[2:]) is False
         #assert_equal(self._was_cache_reset(cache), False)
         # TODO: same story backward
-        raise SkipTest
+        pytest.skip()
 
     def test_sequential_caching_call(self):
-        raise SkipTest
+        pytest.skip()
 
     def test_sequential_caching_can_prepend(self):
         cache = self.pseudo_minus._cache_can_prepend
@@ -1877,23 +1877,23 @@ class TestPrefixTrajectoryEnsemble(EnsembleTest):
         assert ens.strict_can_append(traj[2:3]) is True
         assert ens(traj[2:3]) is True
 
-    @raises(RuntimeError)
     def test_can_prepend(self):
         traj = ttraj['upper_in_in_in']
         ens = PrefixTrajectoryEnsemble(
             SequentialEnsemble([self.inX]),
             traj[0:2]
         )
-        ens.can_prepend(traj[2:3])
+        with pytest.raises(RuntimeError):
+            ens.can_prepend(traj[2:3])
 
-    @raises(RuntimeError)
     def test_strict_can_prepend(self):
         traj = ttraj['upper_in_in_in']
         ens = PrefixTrajectoryEnsemble(
             SequentialEnsemble([self.inX]),
             traj[0:2]
         )
-        ens.strict_can_prepend(traj[2:3])
+        with pytest.raises(RuntimeError):
+            ens.strict_can_prepend(traj[2:3])
 
     def test_caching_in_fwdapp_seq(self):
         inX = AllInXEnsemble(vol1)
@@ -1955,23 +1955,23 @@ class TestSuffixTrajectoryEnsemble(EnsembleTest):
         assert ens.strict_can_prepend(traj[-4:-2]) is False
         assert ens(traj[-4:-2]) is False
 
-    @raises(RuntimeError)
     def test_can_append(self):
         traj = ttraj['upper_out_in_in_in']
         ens = SuffixTrajectoryEnsemble(
             SequentialEnsemble([self.inX]),
             traj[-2:]
         )
-        ens.can_append(traj)
+        with pytest.raises(RuntimeError):
+            ens.can_append(traj)
 
-    @raises(RuntimeError)
     def test_strict_can_append(self):
         traj = ttraj['upper_out_in_in_in']
         ens = SuffixTrajectoryEnsemble(
             SequentialEnsemble([self.inX]),
             traj[-2:]
         )
-        ens.strict_can_append(traj)
+        with pytest.raises(RuntimeError):
+            ens.strict_can_append(traj)
 
     def test_caching_in_bkwdprep_seq(self):
         length1 = LengthEnsemble(1)
@@ -2033,11 +2033,11 @@ class TestMinusInterfaceEnsemble(EnsembleTest):
         dct2 = rebuilt.to_dict()
         assert dct == dct2
 
-    @raises(ValueError)
     def test_minus_nl1_fail(self):
-        minus_nl1 = MinusInterfaceEnsemble(state_vol=vol1,
-                                           innermost_vols=vol2,
-                                           n_l=1)
+        with pytest.raises(ValueError):
+            minus_nl1 = MinusInterfaceEnsemble(state_vol=vol1,
+                                               innermost_vols=vol2,
+                                               n_l=1)
 
 
     def test_minus_nl2_ensemble(self):
@@ -2357,7 +2357,6 @@ class TestEnsembleSplit(EnsembleTest):
         self.outA = AllOutXEnsemble(vol1)
 
     def test_split(self):
-#        raise SkipTest
         traj1 = ttraj['upper_in_out_in_in']
         # print [s for s in traj1]
         subtrajs_in_1 = self.inA.split(traj1)
@@ -2719,8 +2718,7 @@ class TestEnsembleEquality(object):
     def test_empty_ensemble_equality(self):
         ens1 = paths.EmptyEnsemble()
         ens2 = paths.EmptyEnsemble()
-        assert_true(ens1 == ens2)
-        assert_false(ens1 != ens2)
+        assert ens1 == ens2
 
     # TODO: may add tests for other ensembles, or may move this test
     # somewhere else

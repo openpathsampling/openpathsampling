@@ -3,8 +3,6 @@ from builtins import object
 import pytest
 import openpathsampling as paths
 
-from nose.tools import (assert_not_equal, raises, assert_true)
-from nose.plugins.skip import SkipTest
 from .test_helpers import make_1d_traj, raises_with_message_like
 
 try:
@@ -67,7 +65,7 @@ class TestDynamicsEngine(object):
         try:
             self.stupid.bad_property
         except AttributeError as e:
-            assert_true(str(e).endswith(error_string_end))
+            assert str(e).endswith(error_string_end)
 
         else:
             raise AssertionError("Did not raise appropriate AttributeError")

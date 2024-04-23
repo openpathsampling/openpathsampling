@@ -1,7 +1,4 @@
 from __future__ import absolute_import
-from nose.tools import (assert_not_equal, assert_almost_equal,
-                        raises)
-from nose.plugins.skip import Skip, SkipTest
 
 import io
 import sys
@@ -111,7 +108,7 @@ class TestPathSimulatorHook(object):
         hook_instance = StupiderHook()
         sim = NoStepHookPathSimulator(storage=None)
         sim.attach_hook(hook_instance.hook_method, hook_for='extra_hook')
-        assert_not_equal(hook_instance.foo, "foo")
+        assert hook_instance.foo != "foo"
         sim.run(1)
         assert hook_instance.foo == "foo"
 
@@ -129,7 +126,7 @@ class TestPathSimulatorHook(object):
         assert stupid.finished_simulation is False
         assert stupid.began_steps == 0
         assert stupid.finished_steps == 0
-        assert_not_equal(stupider.foo, "foo")
+        assert stupider.foo != "foo"
         # run
         sim.run(3)
         # check results
@@ -139,17 +136,17 @@ class TestPathSimulatorHook(object):
         assert stupid.finished_steps == 3
         assert stupider.foo == "foo"
 
-    @raises(TypeError)
     def test_bad_extra_hook_method(self):
         sim = NoStepHookPathSimulator(storage=None)
         stupid = StupidHook()
-        sim.attach_hook(stupid)
+        with pytest.raises(TypeError):
+            sim.attach_hook(stupid)
 
-    @raises(TypeError)
     def test_bad_hook_name(self):
         sim = NoStepHookPathSimulator(storage=None)
         stupider = StupiderHook()
-        sim.attach_hook(stupider.hook_method, "blah")
+        with pytest.raises(TypeError):
+            sim.attach_hook(stupider.hook_method, "blah")
 
     def test_no_step_hook_simulation_hooks(self):
         sim = NoStepHookPathSimulator(storage=None)
@@ -163,7 +160,7 @@ class TestPathSimulatorHook(object):
             assert len(sim.hooks[hook]) == 1
 
         assert stupid.began_simulation is False
-        assert_not_equal(stupider.foo, "foo")
+        assert stupider.foo != "foo"
         sim.run(1)
         assert stupid.began_simulation is True
         assert stupider.foo == "foo"

@@ -5,7 +5,6 @@ import numpy as np
 
 from nose.tools import (assert_equal, assert_not_equal, assert_almost_equal,
                         raises)
-from nose.plugins.skip import Skip, SkipTest
 from .test_helpers import (
     true_func, assert_equal_array_array, make_1d_traj, data_filename
 )

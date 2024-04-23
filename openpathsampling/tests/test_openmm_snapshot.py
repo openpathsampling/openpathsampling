@@ -3,9 +3,8 @@ from __future__ import absolute_import
 from builtins import object
 import openpathsampling.engines.openmm as omm_engine
 import openpathsampling as paths
-from nose.tools import (assert_equal, assert_almost_equal, assert_not_equal,
+from nose.tools import (assert_equal, assert_not_equal,
                         assert_is_not, assert_is)
-from nose.plugins.skip import SkipTest
 from .test_helpers import data_filename, assert_close_unit, u
 
 import pytest
@@ -28,10 +27,10 @@ logging.getLogger('openpathsampling.netcdfplus').setLevel(logging.CRITICAL)
 class TestOpenMMSnapshot(object):
     def setup_method(self):
         if not openmm:
-            raise SkipTest("OpenMM not installed")
+            pytest.skip("OpenMM not installed")
         if not omt:
-            raise SkipTest("OpenMMTools not installed; required for OpenMM "
-                           "tests.")
+            pytest.skip("OpenMMTools not installed; required for OpenMM "
+                        "tests.")
         self.test_system = omt.testsystems.AlanineDipeptideVacuum()
         self.template = omm_engine.snapshot_from_testsystem(self.test_system)
         self.engine = omm_engine.Engine(

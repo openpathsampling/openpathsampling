@@ -7,7 +7,6 @@ import pytest
 from builtins import object
 from nose.tools import (assert_equal, assert_not_equal, assert_is, raises,
                         assert_true)
-from nose.plugins.skip import Skip, SkipTest
 from numpy.testing import assert_allclose
 from .test_helpers import CallIdentity, raises_with_message_like, assert_close_unit
 
