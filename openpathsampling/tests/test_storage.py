@@ -10,8 +10,6 @@ import os
 
 import pytest
 
-from nose.tools import (assert_equal)
-
 import openpathsampling as paths
 
 import openpathsampling.engines.openmm as peng
@@ -80,10 +78,8 @@ class TestStorage(object):
         # check if path topologies have the same JSON string
         # this also tests the simplifier for topologies
 
-        assert_equal(
-            self.simplifier.to_json(self.template_snapshot.topology),
-            self.simplifier.to_json(loaded_topology)
-        )
+        assert self.simplifier.to_json(self.template_snapshot.topology) \
+                == self.simplifier.to_json(loaded_topology)
 
         store.close()
 
