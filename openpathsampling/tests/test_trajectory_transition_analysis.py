@@ -248,17 +248,17 @@ class TestTrajectoryTransitionAnalysis(object):
 
         self.analyzer.reset_analysis()
         self.analyzer.analyze([self.trajectory])
-        assert cont_frames[self.stateA].tolist() \
-                == self.analyzer.continuous_frames[self.stateA].tolist()
-        assert life_frames[self.stateA].tolist() \
-                == self.analyzer.lifetime_frames[self.stateA].tolist()
+        assert (cont_frames[self.stateA].tolist()
+                == self.analyzer.continuous_frames[self.stateA].tolist())
+        assert (life_frames[self.stateA].tolist()
+                == self.analyzer.lifetime_frames[self.stateA].tolist())
         A2B = (self.stateA, self.stateB)
-        assert trans_frames[A2B].tolist() \
-                == self.analyzer.transition_duration_frames[A2B].tolist()
-        assert cont_times[self.stateA].mean() \
-                == self.analyzer.continuous_times[self.stateA].mean()
-        assert life_times[self.stateA].mean() \
-                == self.analyzer.lifetimes[self.stateA].mean()
-        assert trans_times[A2B].mean() \
-                == self.analyzer.transition_duration[A2B].mean()
+        assert (trans_frames[A2B].tolist()
+                == self.analyzer.transition_duration_frames[A2B].tolist())
+        assert (cont_times[self.stateA].mean()
+                == self.analyzer.continuous_times[self.stateA].mean())
+        assert (life_times[self.stateA].mean()
+                == self.analyzer.lifetimes[self.stateA].mean())
+        assert (trans_times[A2B].mean()
+                == self.analyzer.transition_duration[A2B].mean())
 

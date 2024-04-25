@@ -72,21 +72,21 @@ class TestMSOuterTISInterface(object):
 
     def test_volume_for_interface_set(self):
         assert (
-            self.ms_outer.volume_for_interface_set(self.interfaces_inc) \
+            self.ms_outer.volume_for_interface_set(self.interfaces_inc)
             == self.volumes[0]
         )
         assert (
-            self.ms_outer.volume_for_interface_set(self.interfaces_dec) \
+            self.ms_outer.volume_for_interface_set(self.interfaces_dec)
             == self.volumes[1]
         )
 
     def test_lambda_for_interface_set(self):
         assert (
-            self.ms_outer.lambda_for_interface_set(self.interfaces_inc) \
+            self.ms_outer.lambda_for_interface_set(self.interfaces_inc)
             == 0.5
         )
         assert (
-            self.ms_outer.lambda_for_interface_set(self.interfaces_dec) \
+            self.ms_outer.lambda_for_interface_set(self.interfaces_dec)
             == 0.4
         )
 

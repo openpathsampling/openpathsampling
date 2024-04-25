@@ -1434,8 +1434,8 @@ class TestSequentialEnsembleCache(EnsembleCacheTest):
         assert self.pseudo_minus.can_append(self.traj[2:]) is False
         assert self.pseudo_minus(self.traj[2:]) is False
         #assert_equal(self._was_cache_reset(cache), False)
-        # TODO: same story backward
-    def test_sequential_caching_resets_backward(self)
+
+    def test_sequential_caching_resets_backward(self):
         # TODO: same story backward
         pytest.skip()
 
@@ -2721,6 +2721,7 @@ class TestEnsembleEquality(object):
         ens1 = paths.EmptyEnsemble()
         ens2 = paths.EmptyEnsemble()
         assert ens1 == ens2
+        assert not ens1 != ens2  # needed __ne__ tested in the Py27 days
 
     # TODO: may add tests for other ensembles, or may move this test
     # somewhere else

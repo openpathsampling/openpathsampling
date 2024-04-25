@@ -302,16 +302,16 @@ class TestCommittorSimulation(object):
             traj = step.active[0].trajectory
             traj_str = traj.summarize_by_volumes_str(self.state_labels)
             if traj_str == "None-Right":
-                assert step.change.canonical.mover \
-                        == self.simulation.forward_mover
-                assert step.active[0].ensemble \
-                        == self.simulation.forward_ensemble
+                assert (step.change.canonical.mover
+                        == self.simulation.forward_mover)
+                assert (step.active[0].ensemble
+                        == self.simulation.forward_ensemble)
                 counts['fwd'] += 1
             elif traj_str == "Left-None":
-                assert step.change.canonical.mover \
-                        == self.simulation.backward_mover
-                assert step.active[0].ensemble \
-                        == self.simulation.backward_ensemble
+                assert (step.change.canonical.mover
+                        == self.simulation.backward_mover)
+                assert (step.active[0].ensemble
+                        == self.simulation.backward_ensemble)
                 counts['bkwd'] += 1
             else:
                 raise AssertionError(
