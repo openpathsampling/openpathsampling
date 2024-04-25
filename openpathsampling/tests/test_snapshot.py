@@ -5,8 +5,6 @@ from __future__ import absolute_import
 import pytest
 
 from builtins import object
-from nose.tools import (assert_equal, assert_not_equal, assert_is, raises,
-                        assert_true)
 from numpy.testing import assert_allclose
 from .test_helpers import CallIdentity, raises_with_message_like, assert_close_unit
 
@@ -57,9 +55,9 @@ class TestSnapshotCopy(object):
                                     velocities=np.array([[0.0, 0.0, 0.0],
                                                          [0.0, 0.0, 0.0]]))
         new_snap = snap.copy()
-        assert_true(new_snap is not snap)
-        assert_true(new_snap.coordinates is not snap.coordinates)
+        assert new_snap is not snap
+        assert new_snap.coordinates is not snap.coordinates
         assert_allclose(new_snap.coordinates, snap.coordinates)
-        assert_true(new_snap.box_vectors is snap.box_vectors)
-        assert_true(new_snap.box_vectors is None)
-        assert_true(new_snap.engine is snap.engine)
+        assert new_snap.box_vectors is snap.box_vectors
+        assert new_snap.box_vectors is None
+        assert new_snap.engine is snap.engine

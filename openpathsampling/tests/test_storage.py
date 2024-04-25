@@ -20,13 +20,12 @@ from openpathsampling.storage import Storage
 from .test_helpers import (data_filename, md, compare_snapshot)
 
 import numpy as np
-from nose.plugins.skip import SkipTest
 
 
 class TestStorage(object):
     def setup_method(self):
         if not md:
-            raise SkipTest("mdtraj not installed")
+            pytest.skip("mdtraj not installed")
         self.mdtraj = md.load(data_filename("ala_small_traj.pdb"))
         _ = pytest.importorskip('simtk.unit')
         self.traj = peng.trajectory_from_mdtraj(
@@ -66,7 +65,7 @@ class TestStorage(object):
         store.close()
 
     def test_stored_topology(self):
-        raise SkipTest
+        pytest.skip()
         store = Storage(
             filename=self.filename,
             mode='w')

@@ -4,7 +4,7 @@ from builtins import zip
 from builtins import range
 from past.utils import old_div
 from builtins import object
-from nose.tools import assert_raises
+import pytest
 from numpy.testing import assert_array_almost_equal, assert_almost_equal
 from .test_helpers import (make_1d_traj, data_filename, assert_items_equal,
                            assert_same_items)
@@ -200,13 +200,11 @@ class TestReactiveFluxAnalysis(object):
         # check failure of 3D histogram
         hash3D = lambda snap: (snap.xyz[0][0], snap.xyz[0][0], snap.xyz[0][0])
         bins3D = [-0.0015, 0.0005, 0.0015]
-        assert_raises(RuntimeError,
-                      self.analysis.flux_histogram,
-                      hash3D,
-                      bins3D)
+        with pytest.raises(RuntimeError):
+            self.analysis.flux_histogram(hash3D, bins3D)
 
-        assert_raises(NotImplementedError, self.analysis.committor)
-        assert_raises(NotImplementedError,
-                      self.analysis.committor_histogram,
-                      hash1D,
-                      bins1D)
+        with pytest.raises(NotImplementedError):
+            self.analysis.committor()
+
+        with pytest.raises(NotImplementedError):
+            self.analysis.committor_histogram(hash1D, bins1D)
