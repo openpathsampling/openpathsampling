@@ -1435,6 +1435,8 @@ class TestSequentialEnsembleCache(EnsembleCacheTest):
         assert self.pseudo_minus(self.traj[2:]) is False
         #assert_equal(self._was_cache_reset(cache), False)
         # TODO: same story backward
+    def test_sequential_caching_resets_backward(self)
+        # TODO: same story backward
         pytest.skip()
 
     def test_sequential_caching_call(self):
@@ -1588,13 +1590,13 @@ class TestSlicedTrajectoryEnsemble(EnsembleTest):
         slice_no_ends = slice(1, -1)
         inX = AllInXEnsemble(vol1)
         inXstr = "x[t] in {x|Id(x) in [0.1, 0.5]} for all t"
-        assert (SlicedTrajectoryEnsemble(inX, even_slice).__str__() \
+        assert (SlicedTrajectoryEnsemble(inX, even_slice).__str__()
                 == "("+inXstr+" in {:} every 2)")
-        assert (SlicedTrajectoryEnsemble(inX, slice_1_10).__str__() \
+        assert (SlicedTrajectoryEnsemble(inX, slice_1_10).__str__()
                 == "("+inXstr+" in {1:10})")
-        assert (SlicedTrajectoryEnsemble(inX, slice_1_end).__str__() \
+        assert (SlicedTrajectoryEnsemble(inX, slice_1_end).__str__()
                 == "("+inXstr+" in {1:})")
-        assert (SlicedTrajectoryEnsemble(inX, slice_no_ends).__str__() \
+        assert (SlicedTrajectoryEnsemble(inX, slice_no_ends).__str__()
                 == "("+inXstr+" in {1:-1})")
 
 class TestOptionalEnsemble(EnsembleTest):
@@ -2506,7 +2508,7 @@ class TestVolumeCombinations(EnsembleTest):
                         contents = None
                     #print contents, cache_results[cache][i]
 
-                    assert (cache.contents['previous'] \
+                    assert (cache.contents['previous']
                             == cache_results[cache][i])
 
     def test_call_outA_or_outB(self):

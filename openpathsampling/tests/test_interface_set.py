@@ -54,7 +54,7 @@ class TestInterfaceSet(object):
         # getitem for slices
         sliced = self.interface_set[0:2]
         for vol in sliced:
-            assert (sliced.get_lambda(vol)\
+            assert (sliced.get_lambda(vol)
                     == self.interface_set.get_lambda(vol))
         # special case of -1 needs to work (used frequently!)
         assert self.volumes[-1] == self.interface_set[-1]

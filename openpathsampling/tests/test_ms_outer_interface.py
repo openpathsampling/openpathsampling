@@ -59,9 +59,9 @@ class TestMSOuterTISInterface(object):
         by_lambda = self.ms_outer
         explicit = self.ms_outer_explicit
         for iface_set in explicit.interface_sets:
-            assert (by_lambda.volume_for_interface_set(iface_set) \
+            assert (by_lambda.volume_for_interface_set(iface_set)
                     == explicit.volume_for_interface_set(iface_set))
-            assert (by_lambda.lambda_for_interface_set(iface_set) \
+            assert (by_lambda.lambda_for_interface_set(iface_set)
                     == explicit.lambda_for_interface_set(iface_set))
 
         assert len(explicit.volumes) == len(by_lambda.volumes)

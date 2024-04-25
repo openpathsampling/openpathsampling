@@ -189,8 +189,8 @@ class TestForwardShootingStrategy(MoveStrategyTestSetup):
         assert len(list_of_selectors) == 6
         for mover, sel in zip(movers, list_of_selectors):
             assert type(mover) == paths.ForwardShootMover
-            assert type(mover.selector) \
-                    == paths.shooting.InterfaceConstrainedSelector
+            assert (type(mover.selector)
+                    == paths.shooting.InterfaceConstrainedSelector)
             assert mover.selector == sel
 
 
@@ -235,14 +235,14 @@ class TestNearestNeighborRepExStrategy(MoveStrategyTestSetup):
         assert len(movers) == 4
         ens0 = self.network.sampling_transitions[0].ensembles
         ens1 = self.network.sampling_transitions[1].ensembles
-        assert movers[0].ensemble_signature_set \
-                == (set([ens0[0], ens0[1]]), set([ens0[0], ens0[1]]))
-        assert movers[1].ensemble_signature_set \
-                == (set([ens0[1], ens0[2]]), set([ens0[1], ens0[2]]))
-        assert movers[2].ensemble_signature_set \
-                == (set([ens1[0], ens1[1]]), set([ens1[0], ens1[1]]))
-        assert movers[3].ensemble_signature_set \
-                == (set([ens1[1], ens1[2]]), set([ens1[1], ens1[2]]))
+        assert (movers[0].ensemble_signature_set
+                == (set([ens0[0], ens0[1]]), set([ens0[0], ens0[1]])))
+        assert (movers[1].ensemble_signature_set
+                == (set([ens0[1], ens0[2]]), set([ens0[1], ens0[2]])))
+        assert (movers[2].ensemble_signature_set
+                == (set([ens1[0], ens1[1]]), set([ens1[0], ens1[1]])))
+        assert (movers[3].ensemble_signature_set
+                == (set([ens1[1], ens1[2]]), set([ens1[1], ens1[2]])))
 
 class TestAllSetRepExStrategy(MoveStrategyTestSetup):
     def test_make_movers(self):
@@ -275,8 +275,8 @@ class TestSelectedPairsRepExStrategy(MoveStrategyTestSetup):
         scheme = MoveScheme(self.network)
         movers = strategy.make_movers(scheme)
         assert len(movers) == 1
-        assert movers[0].ensemble_signature_set \
-                == ({ ens00, ens02 }, ({ ens00, ens02 }))
+        assert (movers[0].ensemble_signature_set
+                == ({ ens00, ens02 }, ({ ens00, ens02 })))
 
     def test_init_ensembles_none(self):
         with pytest.raises(RuntimeError):
@@ -297,12 +297,12 @@ class TestSelectedPairsRepExStrategy(MoveStrategyTestSetup):
         scheme = MoveScheme(self.network)
         movers = strategy.make_movers(scheme)
         assert len(movers) == 3
-        assert movers[0].ensemble_signature_set \
-                == ({ens00, ens01}, {ens00, ens01})
-        assert movers[1].ensemble_signature_set \
-                == ({ens00, ens02}, {ens00, ens02})
-        assert movers[2].ensemble_signature_set \
-                == ({ens01, ens02}, {ens01, ens02})
+        assert (movers[0].ensemble_signature_set
+                == ({ens00, ens01}, {ens00, ens01}))
+        assert (movers[1].ensemble_signature_set
+                == ({ens00, ens02}, {ens00, ens02}))
+        assert (movers[2].ensemble_signature_set
+                == ({ens01, ens02}, {ens01, ens02}))
 
 class TestReplicaExchangeStrategy(MoveStrategyTestSetup):
     def test_make_movers(self):
@@ -380,8 +380,8 @@ class TestEnsembleHopStrategy(MoveStrategyTestSetup):
             input_ensembles=[ens0, ens1, ens2],
             output_ensembles=[ens0, ens1]
         )
-        assert weird_mover.ensemble_signature \
-                == ((ens0,ens1,ens2),(ens0,ens1))
+        assert (weird_mover.ensemble_signature
+                == ((ens0,ens1,ens2),(ens0,ens1)))
         scheme = MoveScheme(self.network)
         scheme.movers['weird'] = [weird_mover]
         strategy = EnsembleHopStrategy(group='weird')
@@ -396,8 +396,8 @@ class TestEnsembleHopStrategy(MoveStrategyTestSetup):
             input_ensembles=[ens0, ens1, ens2],
             output_ensembles=[ens0, ens1, ens2]
         )
-        assert weird_mover.ensemble_signature \
-                == ((ens0,ens1,ens2),(ens0,ens1,ens2))
+        assert (weird_mover.ensemble_signature
+                == ((ens0,ens1,ens2),(ens0,ens1,ens2)))
         scheme = MoveScheme(self.network)
         scheme.movers['weird'] = [weird_mover]
         strategy = EnsembleHopStrategy(group='weird')
@@ -929,8 +929,8 @@ class TestOrganizeByMoveGroupStrategy(MoveStrategyTestSetup):
         new_choice_probability = scheme.choice_probability
         new_repex_chooser = [m for m in root if m.name=="RepexChooser"][0]
         repex_chooser_idx = root.movers.index(new_repex_chooser)
-        assert root.weights[repex_chooser_idx] \
-                == 3.0*len(new_repex_chooser.movers)
+        assert (root.weights[repex_chooser_idx]
+                == 3.0*len(new_repex_chooser.movers))
 
         new_shoot_chooser = [m for m in root if m.name=="ShootingChooser"][0]
         new_shooter_ensA = [m for m in scheme.movers['shooting']

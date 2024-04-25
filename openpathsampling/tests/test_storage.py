@@ -77,8 +77,8 @@ class TestStorage(object):
         # check if path topologies have the same JSON string
         # this also tests the simplifier for topologies
 
-        assert self.simplifier.to_json(self.template_snapshot.topology) \
-                == self.simplifier.to_json(loaded_topology)
+        assert (self.simplifier.to_json(self.template_snapshot.topology)
+                == self.simplifier.to_json(loaded_topology))
 
         store.close()
 

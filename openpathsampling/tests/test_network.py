@@ -124,8 +124,8 @@ class TestMSTISNetwork(TestMultipleStateTIS):
             assert self.mstis.transitions[trans]._flux == myflux
 
     def test_all_states(self):
-        assert set(self.mstis.all_states) \
-                == set([self.stateA, self.stateB, self.stateC])
+        assert (set(self.mstis.all_states)
+                == set([self.stateA, self.stateB, self.stateC]))
 
     def test_trajectories(self):
         # TODO; make this test fully comprehensive? (loop over all
@@ -393,8 +393,8 @@ class TestMISTISNetwork(TestMultipleStateTIS):
         storage_r = paths.AnalysisStorage(fname)
         reloaded = storage_r.networks[0]
         assert not reloaded.strict_sampling
-        assert reloaded.sampling_transitions[0].ensembles[0] \
-                == self.mistis.sampling_transitions[0].ensembles[0]
+        assert (reloaded.sampling_transitions[0].ensembles[0]
+                == self.mistis.sampling_transitions[0].ensembles[0])
 
         storage_w.close()
         storage_r.close()
