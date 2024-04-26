@@ -54,7 +54,7 @@ class TestInterfaceSet(object):
         # getitem for slices
         sliced = self.interface_set[0:2]
         for vol in sliced:
-            assert (sliced.get_lambda(vol)\
+            assert (sliced.get_lambda(vol)
                     == self.interface_set.get_lambda(vol))
         # special case of -1 needs to work (used frequently!)
         assert self.volumes[-1] == self.interface_set[-1]
@@ -82,18 +82,18 @@ class TestGenericVolumeInterfaceSet(object):
     def test_sanitize_input(self):
         # this is just to make the rest a little more readable
         sanitize = GenericVolumeInterfaceSet._sanitize_input
-        assert (([float("-inf")]*3, [0.0, 0.1, 0.2], 1) \
+        assert (([float("-inf")]*3, [0.0, 0.1, 0.2], 1)
                  == sanitize(float("-inf"), [0.0, 0.1, 0.2]))
-        assert (([0.2, 0.1, 0.0], [float("inf")]*3, -1) \
+        assert (([0.2, 0.1, 0.0], [float("inf")]*3, -1)
                  == sanitize([0.2, 0.1, 0.0], float("inf")))
-        assert (([-0.1, -0.2], [0.1, 0.2], 0) \
+        assert (([-0.1, -0.2], [0.1, 0.2], 0)
                  == sanitize([-0.1, -0.2], [0.1, 0.2]))
-        assert (([0.0, 0.0], [0.1, 0.2], 1) \
+        assert (([0.0, 0.0], [0.1, 0.2], 1)
                  == sanitize([0.0, 0.0], [0.1, 0.2]))
-        assert (([-0.1, -0.2], [0.0, 0.0], -1) \
+        assert (([-0.1, -0.2], [0.0, 0.0], -1)
                  == sanitize([-0.1, -0.2], [0.0, 0.0]))
         # and the idiot case:
-        assert (([-0.1, -0.1], [0.1, 0.1], 0) \
+        assert (([-0.1, -0.1], [0.1, 0.1], 0)
                  == sanitize([-0.1, -0.1], [0.1, 0.1]))
 
     def test_bad_sanitize(self):

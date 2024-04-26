@@ -302,16 +302,16 @@ class TestCommittorSimulation(object):
             traj = step.active[0].trajectory
             traj_str = traj.summarize_by_volumes_str(self.state_labels)
             if traj_str == "None-Right":
-                assert step.change.canonical.mover \
-                        == self.simulation.forward_mover
-                assert step.active[0].ensemble \
-                        == self.simulation.forward_ensemble
+                assert (step.change.canonical.mover
+                        == self.simulation.forward_mover)
+                assert (step.active[0].ensemble
+                        == self.simulation.forward_ensemble)
                 counts['fwd'] += 1
             elif traj_str == "Left-None":
-                assert step.change.canonical.mover \
-                        == self.simulation.backward_mover
-                assert step.active[0].ensemble \
-                        == self.simulation.backward_ensemble
+                assert (step.change.canonical.mover
+                        == self.simulation.backward_mover)
+                assert (step.active[0].ensemble
+                        == self.simulation.backward_ensemble)
                 counts['bkwd'] += 1
             else:
                 raise AssertionError(
@@ -334,8 +334,8 @@ class TestCommittorSimulation(object):
         for step in self.simulation.storage.steps:
             s = step.active[0]
             step.active.sanity_check()  # traj is in ensemble
-            assert s.trajectory.summarize_by_volumes_str(self.state_labels) \
-                    =="None-Right"
+            assert (s.trajectory.summarize_by_volumes_str(self.state_labels)
+                    == "None-Right")
             assert s.ensemble == sim.forward_ensemble
             assert step.change.canonical.mover == sim.forward_mover
 
@@ -352,8 +352,8 @@ class TestCommittorSimulation(object):
         for step in self.simulation.storage.steps:
             s = step.active[0]
             step.active.sanity_check()  # traj is in ensemble
-            assert s.trajectory.summarize_by_volumes_str(self.state_labels) \
-                    == "Left-None"
+            assert (s.trajectory.summarize_by_volumes_str(self.state_labels)
+                    == "Left-None")
             assert s.ensemble == sim.backward_ensemble
             assert step.change.canonical.mover == sim.backward_mover
 
@@ -716,10 +716,10 @@ class TestDirectSimulation(object):
             (state, beta): [(9, 6), (12, 9), (22, 17)]
         }
         assert len(sim.flux_events) == 2
-        assert sim.flux_events[(state, alpha)] \
-                == expected_flux_events[(state, alpha)]
-        assert sim.flux_events[(state, beta)] \
-                == expected_flux_events[(state, beta)]
+        assert (sim.flux_events[(state, alpha)]
+                == expected_flux_events[(state, alpha)])
+        assert (sim.flux_events[(state, beta)]
+                == expected_flux_events[(state, beta)])
 
     def test_simple_flux(self):
         state = self.center
@@ -740,8 +740,8 @@ class TestDirectSimulation(object):
         sim.run(len(predetermined) - 1)
         expected_flux_events = {(state, interface): [(10, 2)]}
         assert len(sim.flux_events) == 1
-        assert sim.flux_events[(state, interface)] \
-                == expected_flux_events[(state, interface)]
+        assert (sim.flux_events[(state, interface)]
+                == expected_flux_events[(state, interface)])
 
     def test_sim_with_storage(self):
         tmpfile = data_filename("direct_sim_test.nc")

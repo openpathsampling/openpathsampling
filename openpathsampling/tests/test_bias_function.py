@@ -355,4 +355,3 @@ class TestSRTISBiasFromNetwork(object):
 
 
 
-        pytest.skip()

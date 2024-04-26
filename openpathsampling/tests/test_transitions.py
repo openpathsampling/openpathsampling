@@ -104,38 +104,38 @@ class TestMinusSidesSummary(object):
 
     def test_normal_minus(self):
         minus = paths.MinusInterfaceEnsemble(self.stateA, self.stateA)
-        assert minus_sides_summary(self.traj_axaxa, minus) \
-                == {"in" : [5], "out" : [4]}
-        assert minus_sides_summary(self.traj_axaxa, minus) \
-                != {"in" : [5], "out" : [3]}
-        assert minus_sides_summary(self.traj_aixiaixia, minus) \
-                == {"in" : [5], "out" : [6] }
-        assert minus_sides_summary(self.traj_aixixiaxia, minus) \
-                == {"in" : [5], "out" : [10] }
+        assert (minus_sides_summary(self.traj_axaxa, minus)
+                == {"in" : [5], "out" : [4]})
+        assert (minus_sides_summary(self.traj_axaxa, minus)
+                != {"in" : [5], "out" : [3]})
+        assert (minus_sides_summary(self.traj_aixiaixia, minus)
+                == {"in" : [5], "out" : [6] })
+        assert (minus_sides_summary(self.traj_aixixiaxia, minus)
+                == {"in" : [5], "out" : [10] })
 
     def test_minus_with_interstitial(self):
         minus = paths.MinusInterfaceEnsemble(self.stateA, self.innermost)
-        assert minus_sides_summary(self.traj_axaxa, minus) \
-                == {"in" : [5], "out" : [4]}
-        assert minus_sides_summary(self.traj_aixiaixia, minus) \
-                == {"in" : [6], "out" : [4] }
-        assert minus_sides_summary(self.traj_aixixiaxia, minus) \
-                == {"in" : [5], "out" : [8] }
+        assert (minus_sides_summary(self.traj_axaxa, minus)
+                == {"in" : [5], "out" : [4]})
+        assert (minus_sides_summary(self.traj_aixiaixia, minus)
+                == {"in" : [6], "out" : [4] })
+        assert (minus_sides_summary(self.traj_aixixiaxia, minus)
+                == {"in" : [5], "out" : [8] })
 
     def test_minus_with_multiple_excursion(self):
         minus = paths.MinusInterfaceEnsemble(self.stateA, self.stateA,
                                              n_l=4)
-        assert minus_sides_summary(self.traj_axaxaxaxa, minus) \
-                == {"in" : [2, 3, 4], "out" : [1, 2, 3]}
-        assert minus_sides_summary(self.traj_aixixiaixaxiaixia, minus) \
-                == {"in" : [2, 1, 3], "out" : [7, 4, 3]}
+        assert (minus_sides_summary(self.traj_axaxaxaxa, minus)
+                == {"in" : [2, 3, 4], "out" : [1, 2, 3]})
+        assert (minus_sides_summary(self.traj_aixixiaixaxiaixia, minus)
+                == {"in" : [2, 1, 3], "out" : [7, 4, 3]})
 
     def test_minus_with_interstitial_and_multiple_excursion(self):
         minus = paths.MinusInterfaceEnsemble(self.stateA, self.innermost, n_l=4)
-        assert minus_sides_summary(self.traj_axaxaxaxa, minus) \
-                == {"in" : [2, 3, 4], "out" : [1, 2, 3]}
-        assert minus_sides_summary(self.traj_aixixiaixaxiaixia, minus) \
-                == {"in" : [4, 1, 5], "out" : [6, 2, 3]}
-        assert minus_sides_summary(self.traj_aixixiaixaxiaixia, minus) \
-                != {"in" : [1, 4, 5], "out" : [6, 2, 3]}
+        assert (minus_sides_summary(self.traj_axaxaxaxa, minus)
+                == {"in" : [2, 3, 4], "out" : [1, 2, 3]})
+        assert (minus_sides_summary(self.traj_aixixiaixaxiaixia, minus)
+                == {"in" : [4, 1, 5], "out" : [6, 2, 3]})
+        assert (minus_sides_summary(self.traj_aixixiaixaxiaixia, minus)
+                != {"in" : [1, 4, 5], "out" : [6, 2, 3]})
 

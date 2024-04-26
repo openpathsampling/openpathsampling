@@ -181,19 +181,19 @@ class TestWeightedTrajectories(TISAnalysisTester):
                    (2, 0): 0, (2, 1): 0, (2, 2): 2, (2, 3): 2}
 
         for ((ens, traj), result) in results.items():
-            assert weighted_trajs[ensembles_AB[ens]][self.trajs_AB[traj]] \
-                    == result
-            assert weighted_trajs[ensembles_BA[ens]][self.trajs_BA[traj]] \
-                    == result
+            assert (weighted_trajs[ensembles_AB[ens]][self.trajs_AB[traj]]
+                    == result)
+            assert (weighted_trajs[ensembles_BA[ens]][self.trajs_BA[traj]]
+                    == result)
 
     def test_steps_to_weighted_trajectories(self):
-        assert len(self.mistis_weighted_trajectories) \
-                == len(self.mistis.sampling_ensembles)
+        assert (len(self.mistis_weighted_trajectories)
+                == len(self.mistis.sampling_ensembles))
         self._check_network_results(self.mistis,
                                     self.mistis_weighted_trajectories)
 
-        assert len(self.mstis_weighted_trajectories) \
-                == len(self.mstis.sampling_ensembles)
+        assert (len(self.mstis_weighted_trajectories)
+                == len(self.mstis.sampling_ensembles))
         self._check_network_results(self.mstis,
                                     self.mstis_weighted_trajectories)
 
@@ -334,8 +334,8 @@ class TestMinusMoveFlux(TISAnalysisTester):
         minus_ensemble_to_mover = {m.minus_ensemble: m
                                    for m in scheme.movers['minus']}
 
-        assert set(minus_ensemble_to_mover.keys()) \
-                == set(network.minus_ensembles)
+        assert (set(minus_ensemble_to_mover.keys())
+                == set(network.minus_ensembles))
         steps = []
         mccycle = 0
         for minus_traj in descriptions:
@@ -429,8 +429,8 @@ class TestPathLengthHistogrammer(TISAnalysisTester):
     def test_calculate(self):
         default_histogrammer = \
                 PathLengthHistogrammer(self.mistis.sampling_ensembles)
-        assert default_histogrammer.hist_parameters \
-                == {'bin_width': 5, 'bin_range': (0, 1000)}
+        assert (default_histogrammer.hist_parameters
+                == {'bin_width': 5, 'bin_range': (0, 1000)})
 
         mistis_histogrammer = PathLengthHistogrammer(
             ensembles=self.mistis.sampling_ensembles,
@@ -679,16 +679,16 @@ class TestTransitionDictResults(TISAnalysisTester):
         )
 
     def test_iter(self):
-        assert set(pair for pair in self.mistis_transition_dict) \
-                == set(pair for pair in self.mstis_transition_dict)
+        assert (set(pair for pair in self.mistis_transition_dict)
+                == set(pair for pair in self.mstis_transition_dict))
 
     def test_get_by_pair(self):
         assert self.mstis_transition_dict[(self.state_A, self.state_B)] == 1
-        assert self.mstis_transition_dict[(self.state_A, self.state_B)] \
-                == self.mistis_transition_dict[(self.state_A, self.state_B)]
+        assert (self.mstis_transition_dict[(self.state_A, self.state_B)]
+                == self.mistis_transition_dict[(self.state_A, self.state_B)])
         assert self.mstis_transition_dict[(self.state_B, self.state_A)] == 2
-        assert self.mstis_transition_dict[(self.state_B, self.state_A)] \
-                == self.mistis_transition_dict[(self.state_B, self.state_A)]
+        assert (self.mstis_transition_dict[(self.state_B, self.state_A)]
+                == self.mistis_transition_dict[(self.state_B, self.state_A)])
 
     def test_get_bad_pair(self):
         with pytest.raises(KeyError):
@@ -698,8 +698,8 @@ class TestTransitionDictResults(TISAnalysisTester):
         mistis_AB = self.mistis.transitions[(self.state_A, self.state_B)]
         mstis_AB = self.mstis.transitions[(self.state_A, self.state_B)]
         assert self.mistis_transition_dict[mistis_AB] == 1
-        assert self.mistis_transition_dict[mistis_AB] \
-                == self.mstis_transition_dict[mstis_AB]
+        assert (self.mistis_transition_dict[mistis_AB]
+                == self.mstis_transition_dict[mstis_AB])
 
     def test_get_by_sampling_transition(self):
         from_A = self.mstis.from_state[self.state_A]
@@ -824,14 +824,14 @@ class TestTISAnalysis(TISAnalysisTester):
         for transition in self.mistis.sampling_transitions:
             state = transition.stateA
             innermost = transition.interfaces[0]
-            assert self.mistis_analysis.state_fluxes(state) \
-                    == {(state, innermost): 0.1}
+            assert (self.mistis_analysis.state_fluxes(state)
+                    == {(state, innermost): 0.1})
 
         for transition in self.mstis.sampling_transitions:
             state = transition.stateA
             innermost = transition.interfaces[0]
-            assert self.mstis_analysis.state_fluxes(state) \
-                    == {(state, innermost): 0.1}
+            assert (self.mstis_analysis.state_fluxes(state)
+                    == {(state, innermost): 0.1})
 
     def test_transition_probability_matrix(self):
         pairs = [(self.state_A, self.state_B), (self.state_B, self.state_A)]
@@ -934,8 +934,8 @@ class TestStandardTISAnalysis(TestTISAnalysis):
         assert set(mistis_interfaces) == set(mistis_ctp.index)
         for iface in mistis_interfaces:
             for state in states:
-                assert expected_mistis.loc[(iface, state)] \
-                        == mistis_ctp.loc[(iface, state)]
+                assert (expected_mistis.loc[(iface, state)]
+                        == mistis_ctp.loc[(iface, state)])
 
         expected_mstis = pd.DataFrame(data=expected_data,
                                       index=mstis_interfaces,
@@ -945,8 +945,8 @@ class TestStandardTISAnalysis(TestTISAnalysis):
         assert set(mstis_interfaces) == set(mstis_ctp.index)
         for iface in mstis_interfaces:
             for state in states:
-                assert expected_mstis.loc[(iface, state)] \
-                        == mstis_ctp.loc[(iface, state)]
+                assert (expected_mstis.loc[(iface, state)]
+                        == mstis_ctp.loc[(iface, state)])
 
     def test_total_crossing_probability(self):
         results = {0.0: 1.0, 0.1: 0.5, 0.2: 0.25, 0.3: 0.125,

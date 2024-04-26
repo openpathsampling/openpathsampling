@@ -772,7 +772,7 @@ class TestDefaultScheme(object):
         assert len(root.movers[name_dict['RepexChooser']].movers) == n_repex
         assert len(root.movers[name_dict['MinusChooser']].movers) == 2
         assert (
-            len(root.movers[name_dict['Ms_outer_shootingChooser']].movers) \
+            len(root.movers[name_dict['Ms_outer_shootingChooser']].movers)
             == 1
         )
 
@@ -1202,5 +1202,5 @@ class TestOneWayShootingMoveScheme(object):
         assert len(scheme.list_initial_ensembles()) == 6
         assert len(init_cond) == 6
         scheme.assert_initial_conditions(init_cond)
-        assert scheme.initial_conditions_report(init_cond) \
-                == "No missing ensembles.\nNo extra ensembles.\n"
+        assert (scheme.initial_conditions_report(init_cond)
+                == "No missing ensembles.\nNo extra ensembles.\n")

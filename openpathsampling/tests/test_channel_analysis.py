@@ -104,7 +104,7 @@ class TestChannelAnalysis(object):
             paths.MCStep(mccycle=1, active=self.incr_2)
         ]
         results = paths.ChannelAnalysis(steps, self.channels)
-        assert results._results =={'incr': [(0,2)], 'decr': [], None: []}
+        assert results._results == {'incr': [(0,2)], 'decr': [], None: []}
 
     def test_analyze_incr_both_decr(self):
         steps = [

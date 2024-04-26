@@ -362,8 +362,8 @@ class TestLangevinBAOABIntegrator(object):
         assert self.sim.velocities[0] != init_vel[0]
         assert self.sim.velocities[1] != init_vel[1]
         # tests that the same random number wasn't used for both:
-        assert self.sim.velocities[0] - init_vel[0] \
-                != self.sim.velocities[1] - init_vel[1]
+        assert (self.sim.velocities[0] - init_vel[0]
+                != self.sim.velocities[1] - init_vel[1])
 
     def test_step(self):
         self.sim.generate_next_frame()

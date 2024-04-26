@@ -54,8 +54,8 @@ class TestPeriodicRangeLogic(object):
         assert periodic_range_and(1, 2, 1, 2) == 1
         assert periodic_range_and(1, 2, 2, 1) is None
         assert periodic_range_and(2, 1, 1, 4) == [(2, 4)]
-        assert periodic_range_and(0.1, 0.4, 0.3, 0.2) \
-                == [(0.1, 0.2), (0.3, 0.4)]
+        assert (periodic_range_and(0.1, 0.4, 0.3, 0.2)
+                == [(0.1, 0.2), (0.3, 0.4)])
 
     def test_periodic_or(self):
         assert periodic_range_or(0.1, 0.3, 0.2, 0.4) == [(0.1, 0.4)]
