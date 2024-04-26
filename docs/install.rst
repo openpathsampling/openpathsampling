@@ -120,10 +120,10 @@ Testing your installation
 
 OpenPathSampling includes a thorough test suite, and running the test suite
 is a good start to troubleshooting any installation problems. The OPS test
-suite requires the packages ``pytest`` and (for legacy reasons) ``nose``.
-These can be  installed with either ``conda`` or ``pip``. For example: ::
+suite requires ``pytest``, which
+can be installed with either ``conda`` or ``pip``. For example: ::
 
-  $ conda install pytest nose
+  $ conda install pytest
 
 Once those are installed, you can run the test suite on your installation
 with the command: ::

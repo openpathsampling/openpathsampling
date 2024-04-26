@@ -1,10 +1,8 @@
 from __future__ import division
 from __future__ import absolute_import
 from builtins import object
+import pytest
 from past.utils import old_div
-from nose.tools import (assert_equal, assert_not_equal, raises,
-                        assert_almost_equal)
-from nose.plugins.skip import SkipTest
 from .test_helpers import assert_items_almost_equal, assert_items_equal
 
 import pandas as pd
@@ -161,7 +159,6 @@ class TestWHAM(object):
         wham_hist = self.wham.wham_bam_histogram(self.input_df)
         np.testing.assert_allclose(wham_hist.values, self.exact)
 
-    @raises(RuntimeError)
     def test_check_overlaps_no_overlap_with_first(self):
         bad_data = np.array([[1.0, 0.0, 0.0],
                              [0.5, 0.0, 0.0],
@@ -171,9 +168,9 @@ class TestWHAM(object):
         bad_df = pd.DataFrame(data=bad_data,
                               index=self.index[0:5],
                               columns=self.columns)
-        self.wham.check_cleaned_overlaps(bad_df)
+        with pytest.raises(RuntimeError):
+            self.wham.check_cleaned_overlaps(bad_df)
 
-    @raises(RuntimeError)
     def test_check_overlaps_no_overlap_with_final(self):
         bad_data = np.array([[1.0, 0.0, 0.0],
                              [0.5, 0.0, 0.0],
@@ -184,9 +181,9 @@ class TestWHAM(object):
         bad_df = pd.DataFrame(data=bad_data,
                               index=self.index[0:6],
                               columns=self.columns)
-        self.wham.check_cleaned_overlaps(bad_df)
+        with pytest.raises(RuntimeError):
+            self.wham.check_cleaned_overlaps(bad_df)
 
-    @raises(RuntimeError)
     def test_check_overlaps_no_overlap_in_middle(self):
         bad_data = np.array([[1.0, 0.0, 0.0, 0.0],
                              [0.5, 1.0, 0.0, 0.0],
@@ -197,4 +194,5 @@ class TestWHAM(object):
         bad_df = pd.DataFrame(data=bad_data,
                               index=self.index[0:6],
                               columns=self.columns + ['Interface 4'])
-        self.wham.check_cleaned_overlaps(bad_df)
+        with pytest.raises(RuntimeError):
+            self.wham.check_cleaned_overlaps(bad_df)

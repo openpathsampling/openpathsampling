@@ -9,9 +9,8 @@ from past.utils import old_div
 from builtins import object
 import os
 
-from nose.tools import (assert_equal, assert_not_equal, assert_almost_equal)
-
-from nose.plugins.skip import SkipTest
+import pytest
+from numpy.testing import assert_almost_equal
 
 import openpathsampling as paths
 import openpathsampling.engines.toy as toy
@@ -108,7 +107,7 @@ class TestLinearSlope(object):
         assert_almost_equal(linear.V(self), 2.0375)
 
     def test_dVdx(self):
-        assert_equal(linear.dVdx(self), [1.5, 0.75])
+        assert linear.dVdx(self) == [1.5, 0.75]
 
 
 class TestDoubleWell(object):
@@ -161,7 +160,7 @@ class TestCombinations(object):
 
 class Test_convert_fcn(object):
     def test_convert_to_3Ndim(self):
-        raise SkipTest
+        pytest.skip()
 
         assert_equal_array_array(toy.convert_to_3Ndim([1.0, 2.0]),
                                  np.array([[1.0, 2.0, 0.0]]))
@@ -203,10 +202,10 @@ class TestToyEngine(object):
     def test_sanity(self):
         assert_items_equal(self.sim._mass, sys_mass)
         assert_items_equal(self.sim._minv, [old_div(1.0,m_i) for m_i in sys_mass])
-        assert_equal(self.sim.n_steps_per_frame, 10)
+        assert self.sim.n_steps_per_frame == 10
 
     def test_snapshot_timestep(self):
-        assert_equal(self.sim.snapshot_timestep, 0.02)
+        assert self.sim.snapshot_timestep == 0.02
 
     def test_snapshot_get(self):
         snapshot = self.sim.current_snapshot
@@ -239,7 +238,7 @@ class TestToyEngine(object):
             traj = self.sim.generate(self.sim.current_snapshot, [true_func])
         except paths.engines.EngineMaxLengthError as e:
             traj = e.last_trajectory
-            assert_equal(len(traj), self.sim.n_frames_max)
+            assert len(traj) == self.sim.n_frames_max
         else:
             raise RuntimeError('Did not raise MaxLength Error')
 
@@ -250,13 +249,13 @@ class TestToyEngine(object):
         traj1 = self.sim.generate(self.sim.current_snapshot, [ens.can_append])
         self.sim.current_snapshot = orig
         traj2 = [orig] + self.sim.generate_n_frames(3)
-        assert_equal(len(traj1), len(traj2))
+        assert len(traj1) == len(traj2)
         for (s1, s2) in zip(traj1, traj2):
             # snapshots are not the same object
-            assert_not_equal(s1, s2)
+            assert s1 != s2
             # however, they have the same values stored in them
-            assert_equal(len(s1.coordinates), 1)
-            assert_equal(len(s1.coordinates[0]), 2)
+            assert len(s1.coordinates) == 1
+            assert len(s1.coordinates[0]) == 2
             assert_items_equal(s1.coordinates[0], s2.coordinates[0])
             assert_items_equal(s1.velocities[0], s2.velocities[0])
 
@@ -305,8 +304,8 @@ class TestLeapfrogVerletIntegrator(object):
         # velocities = init_vel - pes.dVdx(init_pos)/m*dt
         #            = [0.6, 0.5] - [1.5, 0.75]/[1.5, 1.5] * 0.002
         #            = [0.598, 0.499]
-        assert_equal(self.sim.velocities[0], 0.598)
-        assert_equal(self.sim.velocities[1], 0.499)
+        assert self.sim.velocities[0] == 0.598
+        assert self.sim.velocities[1] == 0.499
 
     def test_position_update(self):
         self.sim.integ._position_update(self.sim, 0.002)
@@ -357,14 +356,14 @@ class TestLangevinBAOABIntegrator(object):
     def test_OU_update(self):
         # we can't actually test for correct values, but we *can* test that
         # some things *don't* happen
-        assert_equal(self.sim.velocities[0], init_vel[0])
-        assert_equal(self.sim.velocities[1], init_vel[1])
+        assert self.sim.velocities[0] == init_vel[0]
+        assert self.sim.velocities[1] == init_vel[1]
         self.sim.integ._OU_update(self.sim, 0.002)
-        assert_not_equal(self.sim.velocities[0], init_vel[0])
-        assert_not_equal(self.sim.velocities[1], init_vel[1])
+        assert self.sim.velocities[0] != init_vel[0]
+        assert self.sim.velocities[1] != init_vel[1]
         # tests that the same random number wasn't used for both:
-        assert_not_equal(self.sim.velocities[0] - init_vel[0],
-                         self.sim.velocities[1] - init_vel[1])
+        assert (self.sim.velocities[0] - init_vel[0]
+                != self.sim.velocities[1] - init_vel[1])
 
     def test_step(self):
         self.sim.generate_next_frame()
