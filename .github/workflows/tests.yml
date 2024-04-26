@@ -68,7 +68,7 @@ jobs:
           python -m pip install --no-deps -e .
       - name: "Check installation"
         run: |
-          python -c "import openpathsampling; print(openapthsampling.version.full_version"
+          python -c "import openpathsampling; print(openapthsampling.version.full_version)"
       - name: "Versions"
         run: conda list
       - name: "Autorelease check"
