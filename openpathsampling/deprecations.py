@@ -161,6 +161,14 @@ MSMBUILDER = Deprecation(
     deprecated_in=(1, 1, 0)
 )
 
+PYEMMA = Deprecation(
+    problem=("PyEMMA is no longer maintained. "
+             "PyEMMAFeaturizerCV is no longer officially supported."),
+    remedy="Create a CoordinateFunctionCV to represent the same function.",
+    remove_version=(2, 0),
+    deprecated_in=(1, 6, 1)
+)
+
 OPENMM_MDTRAJTOPOLOGY = Deprecation(
     problem=("openpathsampling.engines.openmm.topology.MDTrajTopology "
              "has been moved."),
