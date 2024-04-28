@@ -24,7 +24,7 @@ else
     INSTALL="install"
 fi
 
-INSTALL_CMD="$EXE $INSTALL -y -q -c conda-forge -c omnia --override-channels"
+INSTALL_CMD="$EXE $INSTALL -y -q -c conda-forge --override-channels"
 
 # for some reason, these approaches to pinning don't always work (but conda
 # always obeys if you explicitly request a pinned version)
