@@ -6,9 +6,6 @@ import collections
 
 import pytest
 
-from nose.tools import (assert_equal, assert_not_equal, assert_almost_equal,
-                        raises)
-from nose.plugins.skip import Skip, SkipTest
 from .test_helpers import (
     true_func, assert_equal_array_array, make_1d_traj, data_filename,
     assert_items_almost_equal
@@ -67,9 +64,9 @@ class PathHistogramTester(object):
                              bin_widths=(0.5, 0.5),
                              interpolate=self.Interpolator, per_traj=False)
         hist.add_trajectory(traj)
-        assert_equal(len(list(hist._histogram.keys())), 2)
-        assert_equal(hist._histogram[(0,0)], 3)
-        assert_equal(hist._histogram[(0,1)], 1)
+        assert len(list(hist._histogram.keys())) == 2
+        assert hist._histogram[(0,0)] == 3
+        assert hist._histogram[(0,1)] == 1
 
 
 class TestPathHistogramNoInterpolate(PathHistogramTester):
@@ -154,13 +151,13 @@ class TestPathHistogram(object):
         for val in [(0,1), (0,2), (0,3), (1,2), (1,3), (1,4), (2,1), (2,3),
                     (2,4), (2,5), (3,1), (3,2), (3,4), (3,5), (3,6), (4,5),
                     (4,6)]:
-            assert_equal(hist._histogram[val], 1.0)
+            assert hist._histogram[val] == 1.0
         for val in [(2,2), (4,4)]:
-            assert_equal(hist._histogram[val], 2.0)
+            assert hist._histogram[val] == 2.0
         for val in [(0,0), (1,1), (3,3)]:
-            assert_equal(hist._histogram[val], 3.0)
+            assert hist._histogram[val] == 3.0
         for val in [(0,4), (0,5), (0.6), (0,7), (-1,0)]:
-            assert_equal(hist._histogram[val], 0.0)
+            assert hist._histogram[val] == 0.0
 
     def test_add_data_to_histograms(self):
         hist = PathHistogram(left_bin_edges=(0.0, 0.0),
@@ -172,13 +169,13 @@ class TestPathHistogram(object):
         for val in [(0,1), (0,2), (0,3), (1,2), (1,3), (1,4), (2,1), (2,3),
                     (2,4), (2,5), (3,1), (3,2), (3,4), (3,5), (3,6), (4,5),
                     (4,6)]:
-            assert_equal(counter[val], 1.0)
+            assert counter[val] == 1.0
         for val in [(2,2), (4,4)]:
-            assert_equal(counter[val], 2.0)
+            assert counter[val] == 2.0
         for val in [(0,0), (1,1), (3,3)]:
-            assert_equal(counter[val], 3.0)
+            assert counter[val] == 3.0
         for val in [(0,4), (0,5), (0.6), (0,7), (-1,0)]:
-            assert_equal(counter[val], 0.0)
+            assert counter[val] == 0.0
 
     def test_add_data_to_histograms_no_weight(self):
         hist = PathHistogram(left_bin_edges=(0.0, 0.0),
@@ -189,13 +186,13 @@ class TestPathHistogram(object):
         for val in [(0,1), (0,2), (0,3), (1,2), (1,3), (1,4), (2,1), (2,3),
                     (2,4), (2,5), (3,1), (3,2), (3,4), (3,5), (3,6), (4,5),
                     (4,6)]:
-            assert_equal(counter[val], 1.0)
+            assert counter[val] == 1.0
         for val in [(2,2), (4,4)]:
-            assert_equal(counter[val], 1.0)
+            assert counter[val] == 1.0
         for val in [(0,0), (1,1), (3,3)]:
-            assert_equal(counter[val], 2.0)
+            assert counter[val] == 2.0
         for val in [(0,4), (0,5), (0.6), (0,7), (-1,0)]:
-            assert_equal(counter[val], 0.0)
+            assert counter[val] == 0.0
 
 
 class TestPathDensityHistogram(object):
@@ -225,35 +222,35 @@ class TestPathDensityHistogram(object):
         hist = PathDensityHistogram(self.cvs, self.left_bin_edges,
                                     self.bin_widths)
         counter = hist.histogram([self.traj1, self.traj2])
-        assert_equal(len(counter), 5)
+        assert len(counter) == 5
         for bin_label in [(0,0,0), (2,0,0), (1,0,0), (2,1,1)]:
-            assert_equal(counter[bin_label], 1.0)
-        assert_equal(counter[(2,1,0)], 2.0)
+            assert counter[bin_label] == 1.0
+        assert counter[(2,1,0)] == 2.0
         for bin_label in [(1,1,1), (2,2,2), (-1,0,0), (0,-1,0)]:
-            assert_equal(counter[bin_label], 0.0)
+            assert counter[bin_label] == 0.0
 
     def test_histogram_with_weights(self):
         hist = PathDensityHistogram(self.cvs, self.left_bin_edges,
                                     self.bin_widths)
         counter = hist.histogram([self.traj1, self.traj2],
                                  weights=[1.0, 2.0])
-        assert_equal(len(counter), 5)
+        assert len(counter) == 5
         for bin_label in [(0,0,0), (2,0,0), (1,0,0)]:
-            assert_equal(counter[bin_label], 1.0)
-        assert_equal(counter[(2,1,1)], 2.0)
-        assert_equal(counter[(2,1,0)], 3.0)
+            assert counter[bin_label] == 1.0
+        assert counter[(2,1,1)] == 2.0
+        assert counter[(2,1,0)] == 3.0
         for bin_label in [(1,1,1), (2,2,2), (-1,0,0), (0,-1,0)]:
-            assert_equal(counter[bin_label], 0.0)
+            assert counter[bin_label] == 0.0
 
     def test_histogram_single_traj(self):
         hist = PathDensityHistogram(self.cvs, self.left_bin_edges,
                                     self.bin_widths)
         counter = hist.histogram(self.traj1)
-        assert_equal(len(counter), 4)
+        assert len(counter) == 4
         for bin_label in [(0,0,0), (2,0,0), (1,0,0), (2,1,0)]:
-            assert_equal(counter[bin_label], 1.0)
+            assert counter[bin_label] == 1.0
         for bin_label in [(1,1,1), (2,2,2), (-1,0,0), (0,-1,0)]:
-            assert_equal(counter[bin_label], 0.0)
+            assert counter[bin_label] == 0.0
 
     def test_map_to_float_bins_trajectory(self):
         hist = PathDensityHistogram(self.cvs, self.left_bin_edges,

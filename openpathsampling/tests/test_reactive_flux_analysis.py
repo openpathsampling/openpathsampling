@@ -4,11 +4,8 @@ from builtins import zip
 from builtins import range
 from past.utils import old_div
 from builtins import object
-from nose.tools import (assert_equal, assert_not_equal, raises,
-                        assert_almost_equal, assert_true, assert_in,
-                        assert_raises)
-from nose.plugins.skip import SkipTest
-from numpy.testing import assert_array_almost_equal
+import pytest
+from numpy.testing import assert_array_almost_equal, assert_almost_equal
 from .test_helpers import (make_1d_traj, data_filename, assert_items_equal,
                            assert_same_items)
 
@@ -138,8 +135,8 @@ class TestReactiveFluxAnalysis(object):
         paths.EngineMover.default_engine = None
 
     def gradient(self, snapshot):
-        assert_equal(len(snapshot.xyz), 1)
-        assert_equal(len(snapshot.xyz[0]), 1)
+        assert len(snapshot.xyz) == 1
+        assert len(snapshot.xyz[0]) == 1
         return np.array([[1.0]])
 
     def test_analysis(self):
@@ -149,11 +146,11 @@ class TestReactiveFluxAnalysis(object):
 
         # check wrong analyze_single_step() argument
         empty_list = self.analysis.analyze_single_step(3.1415)
-        assert_equal(empty_list, [])
+        assert empty_list == []
 
         # dictionary with three entries returned (mind: trajectories start from
         # x = -0.001, 0.0, 0.001).
-        assert_equal(len(self.analysis), 3)
+        assert len(self.analysis) == 3
 
         # get total and per-snapshot flux.
         flux, flux_dict = self.analysis.flux()
@@ -162,18 +159,18 @@ class TestReactiveFluxAnalysis(object):
         for snapshot in flux_dict.keys():
             if snapshot.xyz[0][0] == -0.001:
                 assert_almost_equal(flux_dict[snapshot], 4.0 / 3.0)
-                assert_equal(self.analysis[snapshot]["accepted"], 1)
-                assert_equal(self.analysis[snapshot]["rejected"], 2)
+                assert self.analysis[snapshot]["accepted"] == 1
+                assert self.analysis[snapshot]["rejected"] == 2
                 assert_almost_equal(self.analysis[snapshot]["sumflux"], 4.0)
             elif snapshot.xyz[0][0] == 0.0:
                 assert_almost_equal(flux_dict[snapshot], 7.0 / 4.0)
-                assert_equal(self.analysis[snapshot]["accepted"], 2)
-                assert_equal(self.analysis[snapshot]["rejected"], 2)
+                assert self.analysis[snapshot]["accepted"] == 2
+                assert self.analysis[snapshot]["rejected"] == 2
                 assert_almost_equal(self.analysis[snapshot]["sumflux"], 7.0)
             elif snapshot.xyz[0][0] == 0.001:
                 assert_almost_equal(flux_dict[snapshot], 19.0 / 5.0)
-                assert_equal(self.analysis[snapshot]["accepted"], 3)
-                assert_equal(self.analysis[snapshot]["rejected"], 2)
+                assert self.analysis[snapshot]["accepted"] == 3
+                assert self.analysis[snapshot]["rejected"] == 2
                 assert_almost_equal(self.analysis[snapshot]["sumflux"], 19.0)
 
         # check total flux.
@@ -203,13 +200,11 @@ class TestReactiveFluxAnalysis(object):
         # check failure of 3D histogram
         hash3D = lambda snap: (snap.xyz[0][0], snap.xyz[0][0], snap.xyz[0][0])
         bins3D = [-0.0015, 0.0005, 0.0015]
-        assert_raises(RuntimeError,
-                      self.analysis.flux_histogram,
-                      hash3D,
-                      bins3D)
+        with pytest.raises(RuntimeError):
+            self.analysis.flux_histogram(hash3D, bins3D)
 
-        assert_raises(NotImplementedError, self.analysis.committor)
-        assert_raises(NotImplementedError,
-                      self.analysis.committor_histogram,
-                      hash1D,
-                      bins1D)
+        with pytest.raises(NotImplementedError):
+            self.analysis.committor()
+
+        with pytest.raises(NotImplementedError):
+            self.analysis.committor_histogram(hash1D, bins1D)

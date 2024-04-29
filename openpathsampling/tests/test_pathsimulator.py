@@ -4,12 +4,12 @@ from builtins import str
 from builtins import range
 from past.utils import old_div
 from builtins import object
+
+import pytest
 from .test_helpers import (raises_with_message_like, data_filename,
                            CalvinistDynamics, make_1d_traj,
                            assert_items_equal)
-from nose.tools import (assert_equal, assert_not_equal, raises,
-                        assert_almost_equal, assert_true, assert_greater)
-# from nose.plugins.skip import SkipTest
+from numpy.testing import assert_almost_equal
 
 from openpathsampling.pathsimulators import *
 import openpathsampling as paths
@@ -65,7 +65,6 @@ class TestFullBootstrapping(object):
             snapshot=self.snapA
         )
 
-    @raises(RuntimeError)
     def test_initial_max_length(self):
         engine = CalvinistDynamics([-0.5, -0.4, -0.3, -0.2, -0.1, 0.1, -0.1])
         bootstrap_AB_maxlength = paths.FullBootstrapping(
@@ -75,16 +74,17 @@ class TestFullBootstrapping(object):
             engine=engine
         )
         bootstrap_AB_maxlength.output_stream = open(os.devnull, "w")
-        bootstrap_AB_maxlength.run(build_attempts=1)
+        with pytest.raises(RuntimeError):
+            bootstrap_AB_maxlength.run(build_attempts=1)
 
     def test_first_traj_ensemble(self):
         traj_starts_in = make_1d_traj([-0.2, -0.1, 0.1, -0.1])
         traj_starts_out = make_1d_traj([0.1, -0.1, 0.1, -0.1])
         traj_not_good = make_1d_traj([0.1, -0.1, 0.1])
         first_traj_ens = self.noforbid_noextra_AB.first_traj_ensemble
-        assert_equal(first_traj_ens(traj_starts_in), True)
-        assert_equal(first_traj_ens(traj_starts_out), True)
-        assert_equal(first_traj_ens(traj_not_good), False)
+        assert first_traj_ens(traj_starts_in)
+        assert first_traj_ens(traj_starts_out)
+        assert not first_traj_ens(traj_not_good)
 
     def test_sampling_ensembles(self):
         traj1 = make_1d_traj([-0.2, -0.1, 0.1, -0.1])
@@ -92,16 +92,16 @@ class TestFullBootstrapping(object):
         traj3 = make_1d_traj([-0.1, 0.1, 0.3, -0.1])
         traj4 = make_1d_traj([0.1, 0.3, 0.1])
         all_ensembles = self.noforbid_noextra_AB.all_ensembles
-        assert_equal(len(all_ensembles), 3)
+        assert len(all_ensembles) == 3
         for ens in all_ensembles:
-            assert_equal(ens(traj1), False)
-            assert_equal(ens(traj4), False)
-        assert_equal(all_ensembles[0](traj2), True)
-        assert_equal(all_ensembles[0](traj3), True)
-        assert_equal(all_ensembles[1](traj2), False)
-        assert_equal(all_ensembles[1](traj3), True)
-        assert_equal(all_ensembles[2](traj2), False)
-        assert_equal(all_ensembles[2](traj3), False)
+            assert not ens(traj1)
+            assert not ens(traj4)
+        assert all_ensembles[0](traj2)
+        assert all_ensembles[0](traj3)
+        assert not all_ensembles[1](traj2)
+        assert all_ensembles[1](traj3)
+        assert not all_ensembles[2](traj2)
+        assert not all_ensembles[2](traj3)
 
     def test_run_already_satisfied(self):
         engine = CalvinistDynamics([-0.5, 0.8, -0.1])
@@ -112,7 +112,7 @@ class TestFullBootstrapping(object):
         )
         bootstrap.output_stream = open(os.devnull, "w")
         gs = bootstrap.run()
-        assert_equal(len(gs), 3)
+        assert len(gs) == 3
 
     def test_run_extra_interfaces(self):
         engine = CalvinistDynamics([-0.5, 0.8, -0.1])
@@ -124,7 +124,7 @@ class TestFullBootstrapping(object):
         )
         bootstrap.output_stream = open(os.devnull, "w")
         gs = bootstrap.run()
-        assert_equal(len(gs), 4)
+        assert len(gs) == 4
 
     def test_run_forbidden_states(self):
         engine = CalvinistDynamics([-0.5, 0.3, 3.2, -0.1, 0.8, -0.1])
@@ -136,7 +136,7 @@ class TestFullBootstrapping(object):
         )
         bootstrap1.output_stream = open(os.devnull, "w")
         gs1 = bootstrap1.run()
-        assert_equal(len(gs1), 3)
+        assert len(gs1) == 3
         assert_items_equal(self.cv(gs1[0]), [-0.5, 0.3, 3.2, -0.1])
         # now with setting forbidden_states
         bootstrap2 = FullBootstrapping(
@@ -152,7 +152,6 @@ class TestFullBootstrapping(object):
         except RuntimeError:
             pass
 
-    @raises(RuntimeError)
     def test_too_much_bootstrapping(self):
         engine = CalvinistDynamics([-0.5, 0.2, -0.1])
         bootstrap = FullBootstrapping(
@@ -161,7 +160,8 @@ class TestFullBootstrapping(object):
             engine=engine,
         )
         bootstrap.output_stream = open(os.devnull, "w")
-        bootstrap.run(max_ensemble_rounds=1)
+        with pytest.raises(RuntimeError):
+            bootstrap.run(max_ensemble_rounds=1)
 
 
 class TestShootFromSnapshotsSimulation(object):
@@ -215,20 +215,20 @@ class TestShootFromSnapshotsSimulation(object):
         self.storage.close()
         analysis = paths.Storage(self.filename, 'r')
         sim = analysis.pathsimulators[0]
-        assert_equal(len(analysis.steps), 10)
+        assert len(analysis.steps) == 10
         length_to_submover = {5: [], 3: []}
         for step in analysis.steps:
             step.active.sanity_check()
-            assert_equal(len(step.active), 1)
+            assert len(step.active) == 1
             active_sample = step.active[0]
             change = step.change
-            assert_equal(change.mover, sim.mover)
+            assert change.mover == sim.mover
             # KeyError here indicates problem with lengths generated
             length_to_submover[len(active_sample)] += change.subchange.mover
 
         for k in length_to_submover:
             # allow 0 or 1  because maybe we made no trials with submover
-            assert_true(len(set(length_to_submover[k])) <= 1)
+            assert len(set(length_to_submover[k])) <= 1
 
 
 class TestCommittorSimulation(object):
@@ -276,8 +276,8 @@ class TestCommittorSimulation(object):
 
     def test_initialization(self):
         sim = self.simulation  # convenience
-        assert_equal(len(sim.initial_snapshots), 1)
-        assert_true(isinstance(sim.mover, paths.RandomChoiceMover))
+        assert len(sim.initial_snapshots) == 1
+        assert isinstance(sim.mover, paths.RandomChoiceMover)
 
     def test_storage(self):
         self.storage.tag['simulation'] = self.simulation
@@ -295,31 +295,31 @@ class TestCommittorSimulation(object):
 
     def test_committor_run(self):
         self.simulation.run(n_per_snapshot=20)
-        assert_equal(len(self.simulation.storage.steps), 20)
+        assert len(self.simulation.storage.steps) == 20
         counts = {'fwd': 0, 'bkwd': 0}
         for step in self.simulation.storage.steps:
             step.active.sanity_check()  # traj is in ensemble
             traj = step.active[0].trajectory
             traj_str = traj.summarize_by_volumes_str(self.state_labels)
             if traj_str == "None-Right":
-                assert_equal(step.change.canonical.mover,
-                             self.simulation.forward_mover)
-                assert_equal(step.active[0].ensemble,
-                             self.simulation.forward_ensemble)
+                assert (step.change.canonical.mover
+                        == self.simulation.forward_mover)
+                assert (step.active[0].ensemble
+                        == self.simulation.forward_ensemble)
                 counts['fwd'] += 1
             elif traj_str == "Left-None":
-                assert_equal(step.change.canonical.mover,
-                             self.simulation.backward_mover)
-                assert_equal(step.active[0].ensemble,
-                             self.simulation.backward_ensemble)
+                assert (step.change.canonical.mover
+                        == self.simulation.backward_mover)
+                assert (step.active[0].ensemble
+                        == self.simulation.backward_ensemble)
                 counts['bkwd'] += 1
             else:
                 raise AssertionError(
                     str(traj_str) + "is neither 'None-Right' nor 'Left-None'"
                 )
-        assert_true(counts['fwd'] > 0)
-        assert_true(counts['bkwd'] > 0)
-        assert_equal(counts['fwd'] + counts['bkwd'], 20)
+        assert counts['fwd'] > 0
+        assert counts['bkwd'] > 0
+        assert counts['fwd'] + counts['bkwd'] == 20
 
     def test_forward_only_committor(self):
         sim = CommittorSimulation(storage=self.storage,
@@ -330,17 +330,14 @@ class TestCommittorSimulation(object):
                                   direction=1)
         sim.output_stream = open(os.devnull, 'w')
         sim.run(n_per_snapshot=10)
-        assert_equal(len(sim.storage.steps), 10)
+        assert len(sim.storage.steps) == 10
         for step in self.simulation.storage.steps:
             s = step.active[0]
             step.active.sanity_check()  # traj is in ensemble
-            assert_equal(
-                s.trajectory.summarize_by_volumes_str(self.state_labels),
-                "None-Right"
-            )
-            assert_equal(s.ensemble, sim.forward_ensemble)
-            assert_equal(step.change.canonical.mover,
-                         sim.forward_mover)
+            assert (s.trajectory.summarize_by_volumes_str(self.state_labels)
+                    == "None-Right")
+            assert s.ensemble == sim.forward_ensemble
+            assert step.change.canonical.mover == sim.forward_mover
 
     def test_backward_only_committor(self):
         sim = CommittorSimulation(storage=self.storage,
@@ -351,17 +348,14 @@ class TestCommittorSimulation(object):
                                   direction=-1)
         sim.output_stream = open(os.devnull, 'w')
         sim.run(n_per_snapshot=10)
-        assert_equal(len(sim.storage.steps), 10)
+        assert len(sim.storage.steps) == 10
         for step in self.simulation.storage.steps:
             s = step.active[0]
             step.active.sanity_check()  # traj is in ensemble
-            assert_equal(
-                s.trajectory.summarize_by_volumes_str(self.state_labels),
-                "Left-None"
-            )
-            assert_equal(s.ensemble, sim.backward_ensemble)
-            assert_equal(step.change.canonical.mover,
-                         sim.backward_mover)
+            assert (s.trajectory.summarize_by_volumes_str(self.state_labels)
+                    == "Left-None")
+            assert s.ensemble == sim.backward_ensemble
+            assert step.change.canonical.mover == sim.backward_mover
 
     def test_multiple_initial_snapshots(self):
         snap1 = toys.Snapshot(coordinates=np.array([[0.1]]),
@@ -374,7 +368,7 @@ class TestCommittorSimulation(object):
                                   initial_snapshots=[self.snap0, snap1])
         sim.output_stream = open(os.devnull, 'w')
         sim.run(10)
-        assert_equal(len(self.storage.steps), 20)
+        assert len(self.storage.steps) == 20
         snap0_coords = self.snap0.coordinates.tolist()
         snap1_coords = snap1.coordinates.tolist()
         count = {self.snap0: 0, snap1: 0}
@@ -388,7 +382,7 @@ class TestCommittorSimulation(object):
                 msg = "Shooting snapshot matches neither test snapshot"
                 raise AssertionError(msg)
             count[mysnap] += 1
-        assert_equal(count, {self.snap0: 10, snap1: 10})
+        assert count == {self.snap0: 10, snap1: 10}
 
     def test_randomized_committor(self):
         # this shows that we get both states even with forward-only
@@ -402,7 +396,7 @@ class TestCommittorSimulation(object):
                                   direction=1)
         sim.output_stream = open(os.devnull, 'w')
         sim.run(50)
-        assert_equal(len(sim.storage.steps), 50)
+        assert len(sim.storage.steps) == 50
         counts = {'None-Right': 0,
                   'Left-None': 0,
                   'None-Left': 0,
@@ -417,11 +411,11 @@ class TestCommittorSimulation(object):
                 msg = "Got trajectory described as '{0}', length {1}"
                 # this might be okay if it is 'None', length 100000
                 raise AssertionError(msg.format(traj_str, len(traj)))
-        assert_equal(counts['Left-None'], 0)
-        assert_equal(counts['Right-None'], 0)
-        assert_true(counts['None-Left'] > 0)
-        assert_true(counts['None-Right'] > 0)
-        assert_equal(sum(counts.values()), 50)
+        assert counts['Left-None'] == 0
+        assert counts['Right-None'] == 0
+        assert counts['None-Left'] > 0
+        assert counts['None-Right'] > 0
+        assert sum(counts.values()) == 50
 
 
 class TestReactiveFluxSimulation(object):
@@ -491,58 +485,52 @@ class TestReactiveFluxSimulation(object):
 
     def test_initialization(self):
         sim = self.simulation
-        assert_equal(len(sim.initial_snapshots), 3)
-        assert_true(isinstance(sim.mover, paths.ConditionalSequentialMover))
+        assert len(sim.initial_snapshots) == 3
+        assert isinstance(sim.mover, paths.ConditionalSequentialMover)
 
     def test_simulation_run(self):
         self.simulation.run(n_per_snapshot=1)
-        assert_equal(len(self.simulation.storage.steps), 3)
+        assert len(self.simulation.storage.steps) == 3
 
         # snapshot 0, fails at backward shot (falls back to dividing surface)
         step = self.simulation.storage.steps[0]
         # last mover should be backward_mover of simulation
-        assert_equal(step.change.canonical.mover,
-                     self.simulation.backward_mover)
+        assert step.change.canonical.mover == self.simulation.backward_mover
         # active ensemble should be starting ensemble
-        assert_equal(step.active[0].ensemble,
-                     self.simulation.starting_ensemble)
+        assert step.active[0].ensemble == self.simulation.starting_ensemble
         # analyze trajectory, last step should be in 'None', the rest in 'ToA'
         traj = step.change.trials[0].trajectory
         traj_summary = traj.summarize_by_volumes(self.state_labels)
-        assert_equal(traj_summary[0], ('None', 1))
-        assert_equal(traj_summary[1][0], 'ToA')
-        assert_greater(traj_summary[1][1], 1)
+        assert traj_summary[0] == ('None', 1)
+        assert traj_summary[1][0] == 'ToA'
+        assert traj_summary[1][1] > 1
 
         # snapshot 1, fails at backward shot (wrong direction)
         step = self.simulation.storage.steps[1]
         # last mover should be backward_mover of simulation
-        assert_equal(step.change.canonical.mover,
-                     self.simulation.backward_mover)
+        assert step.change.canonical.mover == self.simulation.backward_mover
         # active ensemble should be starting ensemble
-        assert_equal(step.active[0].ensemble,
-                     self.simulation.starting_ensemble)
+        assert step.active[0].ensemble == self.simulation.starting_ensemble
         # analyze trajectory, backwards trajectory reaches immediately 'None'
         traj = step.change.trials[0].trajectory
         traj_summary = traj.summarize_by_volumes(self.state_labels)
-        assert_equal(traj_summary[0], ('None', 2))
+        assert traj_summary[0] == ('None', 2)
 
         # snapshot 2, is accepted
         step = self.simulation.storage.steps[2]
         # last mover should be forward_mover of simulation
-        assert_equal(step.change.canonical.mover,
-                     self.simulation.forward_mover)
+        assert step.change.canonical.mover == self.simulation.forward_mover
         # active ensemble should not be starting ensemble
-        assert_not_equal(step.active[0].ensemble,
-                     self.simulation.starting_ensemble)
+        assert step.active[0].ensemble != self.simulation.starting_ensemble
         # analyze active trajectory, trajectory should start in 'A', end in 'B'
         traj = step.active[0].trajectory
         traj_summary = traj.summarize_by_volumes(self.state_labels)
-        assert_equal(traj_summary[0], ('A', 1))
-        assert_equal(traj_summary[1][0], 'ToA')
-        assert_greater(traj_summary[1][1], 1)
-        assert_equal(traj_summary[2][0], 'None')
-        assert_greater(traj_summary[2][1], 1)
-        assert_equal(traj_summary[3], ('B', 1))
+        assert traj_summary[0] == ('A', 1)
+        assert traj_summary[1][0] == 'ToA'
+        assert traj_summary[1][1] > 1
+        assert traj_summary[2][0] == 'None'
+        assert traj_summary[2][1] > 1
+        assert traj_summary[3] == ('B', 1)
 
 
 class TestDirectSimulation(object):
@@ -574,17 +562,16 @@ class TestDirectSimulation(object):
 
     def test_run(self):
         self.sim.run(200)
-        assert_true(len(self.sim.transition_count) > 1)
-        assert_true(len(self.sim.flux_events[self.flux_pairs[0]]) > 1)
+        assert len(self.sim.transition_count) > 1
+        assert len(self.sim.flux_events[self.flux_pairs[0]]) > 1
 
     def test_results(self):
         self.sim.run(200)
         results = self.sim.results
-        assert_equal(len(results), 2)
-        assert_equal(set(results.keys()),
-                     set(['transition_count', 'flux_events']))
-        assert_equal(results['transition_count'], self.sim.transition_count)
-        assert_equal(results['flux_events'], self.sim.flux_events)
+        assert len(results) == 2
+        assert set(results.keys()) == set(['transition_count', 'flux_events'])
+        assert results['transition_count'] == self.sim.transition_count
+        assert results['flux_events'] == self.sim.flux_events
 
     def test_load_results(self):
         left_interface = paths.CVDefinedVolume(self.cv, -0.3, float("inf"))
@@ -600,8 +587,8 @@ class TestDirectSimulation(object):
         results = {'transition_count': fake_transition_count,
                    'flux_events': fake_flux_events}
         self.sim.load_results(results)
-        assert_equal(self.sim.transition_count, fake_transition_count)
-        assert_equal(self.sim.flux_events, fake_flux_events)
+        assert self.sim.transition_count == fake_transition_count
+        assert self.sim.flux_events == fake_flux_events
 
     def test_transitions(self):
         # set fake data
@@ -609,16 +596,14 @@ class TestDirectSimulation(object):
             (self.center, 1), (self.outside, 4), (self.center, 7),
             (self.extra, 10), (self.center, 12), (self.outside, 14)
         ]
-        assert_equal(self.sim.n_transitions,
-                     {(self.center, self.outside): 2,
-                      (self.outside, self.center): 1,
-                      (self.center, self.extra): 1,
-                      (self.extra, self.center): 1})
-        assert_equal(self.sim.transitions,
-                     {(self.center, self.outside): [3, 2],
-                      (self.outside, self.center): [3],
-                      (self.center, self.extra): [3],
-                      (self.extra, self.center): [2]})
+        assert self.sim.n_transitions == {(self.center, self.outside): 2,
+                                          (self.outside, self.center): 1,
+                                          (self.center, self.extra): 1,
+                                          (self.extra, self.center): 1}
+        assert self.sim.transitions == {(self.center, self.outside): [3, 2],
+                                        (self.outside, self.center): [3],
+                                        (self.center, self.extra): [3],
+                                        (self.extra, self.center): [2]}
 
     def test_rate_matrix(self):
         self.sim.states += [self.extra]
@@ -644,7 +629,7 @@ class TestDirectSimulation(object):
         for i in range(len(self.sim.states)):
             for j in range(len(self.sim.states)):
                 if np.isnan(test_matrix[i][j]):
-                    assert_true(np.isnan(rate_matrix[i][j]))
+                    assert np.isnan(rate_matrix[i][j])
                 else:
                     assert_almost_equal(rate_matrix[i][j],
                                         test_matrix[i][j])
@@ -665,7 +650,7 @@ class TestDirectSimulation(object):
         sim.flux_events = fake_flux_events
         n_flux_events = {(self.center, right_interface): 3,
                          (self.center, left_interface): 2}
-        assert_equal(sim.n_flux_events, n_flux_events)
+        assert sim.n_flux_events == n_flux_events
         time_step = sim.engine.snapshot_timestep
         expected_fluxes = {(self.center, right_interface):
                            1.0 / (((15-3) + (23-15) + (48-23))/3.0) / time_step,
@@ -730,11 +715,11 @@ class TestDirectSimulation(object):
             (state, alpha): [(4, 2), (6, 4), (22, 19)],
             (state, beta): [(9, 6), (12, 9), (22, 17)]
         }
-        assert_equal(len(sim.flux_events), 2)
-        assert_equal(sim.flux_events[(state, alpha)],
-                     expected_flux_events[(state, alpha)])
-        assert_equal(sim.flux_events[(state, beta)],
-                     expected_flux_events[(state, beta)])
+        assert len(sim.flux_events) == 2
+        assert (sim.flux_events[(state, alpha)]
+                == expected_flux_events[(state, alpha)])
+        assert (sim.flux_events[(state, beta)]
+                == expected_flux_events[(state, beta)])
 
     def test_simple_flux(self):
         state = self.center
@@ -754,9 +739,9 @@ class TestDirectSimulation(object):
                                initial_snapshot=init[0])
         sim.run(len(predetermined) - 1)
         expected_flux_events = {(state, interface): [(10, 2)]}
-        assert_equal(len(sim.flux_events), 1)
-        assert_equal(sim.flux_events[(state, interface)],
-                     expected_flux_events[(state, interface)])
+        assert len(sim.flux_events) == 1
+        assert (sim.flux_events[(state, interface)]
+                == expected_flux_events[(state, interface)])
 
     def test_sim_with_storage(self):
         tmpfile = data_filename("direct_sim_test.nc")
@@ -772,9 +757,9 @@ class TestDirectSimulation(object):
         sim.run(200)
         storage.close()
         read_store = paths.AnalysisStorage(tmpfile)
-        assert_equal(len(read_store.trajectories), 1)
+        assert len(read_store.trajectories) == 1
         traj = read_store.trajectories[0]
-        assert_equal(len(traj), 201)
+        assert len(traj) == 201
         read_store.close()
         os.remove(tmpfile)
 

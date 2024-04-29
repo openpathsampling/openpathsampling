@@ -6,7 +6,7 @@ from openpathsampling.netcdfplus import WeakKeyCache, \
     ObjectJSON, create_to_dict, ObjectStore, PseudoAttribute
 
 from openpathsampling.deprecations import (has_deprecations, deprecate,
-                                           MSMBUILDER)
+                                           MSMBUILDER, PYEMMA)
 
 import sys
 if sys.version_info > (3, ):
@@ -672,6 +672,8 @@ class MSMBFeaturizerCV(CoordinateGeneratorCV):
         }
 
 
+@has_deprecations
+@deprecate(PYEMMA)
 class PyEMMAFeaturizerCV(MSMBFeaturizerCV):
     """Make a CV from a function that takes mdtraj.trajectory as input.
 
