@@ -11,7 +11,7 @@ from .simtk_unit import *
 from openpathsampling.integration_tools import HAS_SIMTK_UNIT, unit
 
 class TestSimtkUnitCodec(object):
-    def setup(self):
+    def setup_method(self):
         if not HAS_SIMTK_UNIT:
             pytest.skip("openmm.unit not installed")
         my_unit = unit.nanometer / unit.picosecond**2
@@ -37,7 +37,7 @@ class TestSimtkUnitCodec(object):
 
 
 class TestSimtkQuantityHandler(object):
-    def setup(self):
+    def setup_method(self):
         pytest.importorskip('simtk.unit')
         self.handlers = {
             'float': SimtkQuantityHandler(

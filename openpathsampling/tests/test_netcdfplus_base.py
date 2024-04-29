@@ -3,7 +3,7 @@ import pytest
 from openpathsampling.netcdfplus.base import *
 
 class TestStorableNamedObject(object):
-    def setup(self):
+    def setup_method(self):
         self.obj = StorableNamedObject()
 
     def test_named(self):

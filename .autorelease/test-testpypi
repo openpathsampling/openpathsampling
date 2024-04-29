@@ -1,4 +1,4 @@
 #!/bin/bash
 
-python -m pip install pytest nose
+python -m pip install pytest sqlalchemy
 py.test --pyargs openpathsampling.tests

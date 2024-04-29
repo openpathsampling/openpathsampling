@@ -32,7 +32,7 @@ standard.
 .. rubric:: Tests and Examples
 
 Additions to OPS should include thorough tests. We use `pytest`_ to run our
-tests, although we require `nose`_ for some legacy portions of the tests.
+tests.
 Unit/integration tests are located in the ``openpathsampling/tests/``
 directory.  Examples and integration tests should be written as Jupyter
 notebooks and placed in the ``examples/`` directory.  Pull requests to the
@@ -40,7 +40,6 @@ OPS GitHub repository will automatically run all unit tests with each push.
 We also run a subset of the system tests on each push, using `ipynbtest`_.
 
 .. _pytest: http://pytest.org
-.. _nose: http://nose.readthedocs.io/
 .. _ipynbtest: https://github.com/jhprinz/ipynb-test
 
 -----

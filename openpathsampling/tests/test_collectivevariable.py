@@ -8,7 +8,6 @@ from builtins import object
 from .test_helpers import data_filename, assert_close_unit, md
 
 import pytest
-from nose.plugins.skip import SkipTest
 
 import numpy as np
 
@@ -29,9 +28,9 @@ import os
 
 
 class TestFunctionCV(object):
-    def setup(self):
+    def setup_method(self):
         if not md:
-            raise SkipTest("mdtraj not installed")
+            pytest.skip("mdtraj not installed")
         self.mdtraj = md.load(data_filename("ala_small_traj.pdb"))
         _ = pytest.importorskip('simtk.unit')
         self.traj_topology = peng.trajectory_from_mdtraj(self.mdtraj)
@@ -44,7 +43,7 @@ class TestFunctionCV(object):
         if os.path.isfile("myfile.nc"):
             os.remove("myfile.nc")
 
-    def teardown(self):
+    def teardown_method(self):
         if os.path.isfile("myfile.nc"):
             os.remove("myfile.nc")
 
@@ -87,7 +86,7 @@ class TestFunctionCV(object):
         """ Create an atom pair collectivevariable using MSMSBuilder3 """
 
         if not has_msmbuilder:
-            raise SkipTest("MSMBuilder not installed")
+            pytest.skip("MSMBuilder not installed")
         atom_pairs = [[0, 1], [10, 14]]
         atom_pair_op = op.MSMBFeaturizerCV(
             "atom_pairs",
@@ -105,7 +104,7 @@ class TestFunctionCV(object):
     def test_return_parameters_from_template(self):
 
         if not has_msmbuilder:
-            raise SkipTest("MSMBuilder not installed")
+            pytest.skip("MSMBuilder not installed")
         atom_pairs = [[0, 1], [10, 14]]
         atom_pair_op = op.MSMBFeaturizerCV(
             "atom_pairs",
