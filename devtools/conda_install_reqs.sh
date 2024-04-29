@@ -24,7 +24,7 @@ else
     INSTALL="install"
 fi
 
-INSTALL_CMD="$EXE $INSTALL -y -q -c conda-forge -c omnia --override-channels"
+INSTALL_CMD="$EXE $INSTALL -y -q -c conda-forge --override-channels"
 
 # for some reason, these approaches to pinning don't always work (but conda
 # always obeys if you explicitly request a pinned version)
@@ -36,7 +36,7 @@ WORKAROUNDS=""
 REQUIREMENTS=`python ${DEVTOOLS_DIR}/setup_cfg_reqs.py`
 TESTING=`python ${DEVTOOLS_DIR}/setup_cfg_reqs.py --extra test`
 INTEGRATIONS=`cat ${DEVTOOLS_DIR}/tested_integrations.txt | tr "\n" " "`
-EXPERIMENTAL=`cat ${DEVTOOLS_DIR}/experimental_reqs.txt | tr "\n" " "`
+EXPERIMENTAL=$(python ${DEVTOOLS_DIR}/setup_cfg_reqs.py --extra simstore)
 PY_INSTALL="python=$CONDA_PY"
 
 # PIP_INSTALLS is used for debugging installation problems -- override the

@@ -230,7 +230,7 @@ class CallablePseudoAttribute(PseudoAttribute):
         This function is abstract and need _eval to be implemented to work.
         Problem is that there are two types of callable functions:
         1. direct functions: these can be called and give the wanted value
-           `c(object, \**kwargs)` would be the typical call
+           `c(object, **kwargs)` would be the typical call
         2. a generating function: a function the creates the callable object
            `c(**kwargs)(object)` is the typical call. This is usually used
            for classes. Create the instance and then use it.
@@ -408,7 +408,7 @@ class GeneratorPseudoAttribute(CallablePseudoAttribute):
     """Turn a callable class or function generating a callable object into a CV
 
     The class instance will be called with objects. The instance itself
-    will be created using the given \**kwargs.
+    will be created using the given **kwargs.
     """
 
     def __init__(
@@ -434,7 +434,7 @@ class GeneratorPseudoAttribute(CallablePseudoAttribute):
         kwargs
             additional arguments which should be given to `c` (for example, the
             atoms which define a specific distance/angle). Finally an instance
-            `instance = cls(\**kwargs)` is create when the CV is created and
+            `instance = cls(**kwargs)` is create when the CV is created and
             using the CV will call `instance(objects)`
 
         Notes
