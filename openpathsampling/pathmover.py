@@ -445,7 +445,7 @@ class PathMover(with_metaclass(abc.ABCMeta, TreeMixin, StorableNamedObject)):
         return selected
 
     @abc.abstractmethod
-    def move(self, sample_set):
+    def move(self, sample_set, checkpoint=None):
         """
         Run the generation starting with the initial sample_set specified.
 
@@ -493,7 +493,7 @@ class IdentityPathMover(PathMover):
         super(IdentityPathMover, self).__init__()
         self.counts_as_trial = counts_as_trial
 
-    def move(self, sample_set):
+    def move(self, sample_set, checkpoint=None):
         mover = self if self.counts_as_trial else None
         return paths.EmptyMoveChange(mover=mover)
 
@@ -614,12 +614,12 @@ class SampleMover(PathMover):
         samples = [self.select_sample(sample_set, ens) for ens in ensembles]
         return samples
 
-    def move(self, sample_set):
+    def move(self, sample_set, checkpoint=None):
         samples = self.get_samples_from_sample_set(sample_set)
-        change = self.move_core(samples)
+        change = self.move_core(samples, checkpoint)
         return change
 
-    def move_core(self, samples):
+    def move_core(self, samples, checkpoint=None):
         """Core of the Monte Carlo move. Includes acceptance.
 
         See Also
@@ -643,7 +643,7 @@ class SampleMover(PathMover):
             # engine-specific exceptions if something goes wrong.
             # Most common should be `EngineNaNError` if nan is detected and
             # `EngineMaxLengthError`
-            trials, call_details = self(*samples)
+            trials, call_details = self(*samples, checkpoint=checkpoint)
 
         except SampleNaNError as e:
             e.details.update({'rejection_reason': 'nan'})
@@ -688,7 +688,7 @@ class SampleMover(PathMover):
             )
 
     @abc.abstractmethod
-    def __call__(self, *args):
+    def __call__(self, *args, checkpoint=None):
         """Generate trial samples directly
 
         PathMovers can also be called directly with a list of samples that are
@@ -785,13 +785,19 @@ class EngineMover(SampleMover):
     def _get_out_ensembles(self):
         return [self.target_ensemble]
 
-    def __call__(self, input_sample):
+    def __call__(self, input_sample, checkpoint=None):
         initial_trajectory = input_sample.trajectory
-        shooting_index = self.selector.pick(initial_trajectory)
+
+        data, files = checkpoint.load_checkpoint()
+        if data:
+            shooting_index = data['shooting_index']
+        else:
+            shooting_index = self.selector.pick(initial_trajectory)
 
         try:
             trial_trajectory, run_details = self._run(initial_trajectory,
-                                                      shooting_index)
+                                                      shooting_index,
+                                                      checkpoint)
 
         except paths.engines.EngineNaNError as e:
             trial, details = self._build_sample(
@@ -879,26 +885,32 @@ class EngineMover(SampleMover):
 
         return trial, trial_details
 
-    def _make_forward_trajectory(self, trajectory, shooting_index):
+    def _make_forward_trajectory(self, trajectory, shooting_index,
+                                 checkpoint):
         initial_snapshot = trajectory[shooting_index]  # .copy()
         run_f = paths.PrefixTrajectoryEnsemble(self.target_ensemble,
                                                trajectory[0:shooting_index]
                                                ).can_append
-        partial_trajectory = self.engine.generate(initial_snapshot,
-                                                  running=[run_f])
+        with checkpoint.added_context(engine) as cpt:
+            partial_trajectory = self.engine.generate(initial_snapshot,
+                                                      running=[run_f],
+                                                      checkpoint=cpt)
         trial_trajectory = (trajectory[0:shooting_index] +
                             partial_trajectory)
         # TODO: this should check for overshoot; only works now if ensemble
         # doesn't overshoot
         return trial_trajectory
 
-    def _make_backward_trajectory(self, trajectory, shooting_index):
+    def _make_backward_trajectory(self, trajectory, shooting_index,
+                                  checkpoint):
         initial_snapshot = trajectory[shooting_index].reversed  # _copy()
         run_f = paths.SuffixTrajectoryEnsemble(self.target_ensemble,
                                                trajectory[shooting_index + 1:]
                                                ).can_prepend
-        partial_trajectory = self.engine.generate(initial_snapshot,
-                                                  running=[run_f])
+        with checkpoint.added_context(engine) as cpt:
+            partial_trajectory = self.engine.generate(initial_snapshot,
+                                                      running=[run_f],
+                                                      checkpoint=cpt)
         trial_trajectory = (partial_trajectory.reversed +
                             trajectory[shooting_index + 1:])
         # TODO: this should check for overshoot; only works now if ensemble
@@ -913,9 +925,14 @@ class EngineMover(SampleMover):
     def direction(self):
         return 'unknown'
 
-    def _run(self, trajectory, shooting_index):
+    def _run(self, trajectory, shooting_index, checkpoint=None):
         """Takes initial trajectory and shooting point; return trial
         trajectory"""
+        # now that we're in private, we can assume checkpoint from here
+        # without API break
+        if checkpoint is None:
+            checkpoint = EmptyCheckpoint()
+
         shoot_str = "Running {sh_dir} from frame {fnum} in [0:{maxt}]"
         logger.info(shoot_str.format(
             fnum=shooting_index,
@@ -925,11 +942,11 @@ class EngineMover(SampleMover):
 
         if self.direction == "forward":
             trial_trajectory = self._make_forward_trajectory(
-                trajectory, shooting_index
+                trajectory, shooting_index, checkpoint
             )
         elif self.direction == "backward":
             trial_trajectory = self._make_backward_trajectory(
-                trajectory, shooting_index
+                trajectory, shooting_index, checkpoint
             )
         else:
             raise RuntimeError("Unknown direction: " + str(self.direction))
@@ -1599,10 +1616,21 @@ class SelectionMover(PathMover):
         details = Details(**kwargs)
         return mover, details
 
-    def move(self, sample_set):
-        weights = self._selector(sample_set)
-        mover, details = self.select_mover(weights)
-        subchange = mover.move(sample_set)
+    def move(self, sample_set, checkpoint=None):
+        if checkpoint is None:
+            checkpoint = EmptyCheckpoint()
+
+        data, files = checkpoint.load_checkpoint()
+        if data:
+            mover = data['mover']
+            details = data['details']
+        else:
+            weights = self._selector(sample_set)
+            mover, details = self.select_mover(weights)
+            checkpoint.save_checkpoint({'mover': mover, 'details': details})
+
+        with checkpoint.added_context(mover) as cpt:
+            subchange = mover.move(sample_set, checkpoint=cpt)
 
         path = paths.RandomChoiceMoveChange(
             subchange=subchange,
@@ -1810,7 +1838,8 @@ class ConditionalMover(PathMover):
     def _get_out_ensembles(self):
         return [sub.output_ensembles for sub in self.submovers]
 
-    def move(self, sample_set):
+    def move(self, sample_set, checkpoint=None):
+        # TODO: this mover does not yet support checkpointing
         subglobal = sample_set
 
         ifclause = self.if_mover.move(subglobal)
@@ -1897,7 +1926,8 @@ class SequentialMover(PathMover):
     def _get_out_ensembles(self):
         return [sub.output_ensembles for sub in self.submovers]
 
-    def move(self, sample_set):
+    def move(self, sample_set, checkpoint=None):
+        # TODO: support for checkpointing here is a little tricky
         logger.debug("Starting sequential move")
 
         subglobal = sample_set
@@ -1941,7 +1971,9 @@ class PartialAcceptanceSequentialMover(SequentialMover):
 
         return total
 
-    def move(self, sample_set):
+    def move(self, sample_set, checkpoint=None):
+        # TODO: eventually add checkpointing support here (it is the basis
+        # of bootstrap promotion, which I think is still used)
         logger.debug("==== BEGINNING " + self.name + " ====")
         subglobal = paths.SampleSet(sample_set)
         movechanges = []
@@ -1983,7 +2015,7 @@ class ConditionalSequentialMover(SequentialMover):
             sum([sub.in_out for sub in self.submovers], InOutSet())
         )
 
-    def move(self, sample_set):
+    def move(self, sample_set, checkpoint=None):
         logger.debug("Starting conditional sequential move")
 
         subglobal = sample_set
@@ -2612,9 +2644,9 @@ class SingleReplicaMinusMover(MinusMover):
         # we skip MinusMover's init and go to the grandparent
         super(MinusMover, self).__init__(mover)
 
-    def move(self, sample_set):
+    def move(self, sample_set, checkpoint=None):
         # skip the MinusMover's implementation
-        return super(MinusMover, self).move(sample_set)
+        return super(MinusMover, self).move(sample_set, checkpoint=None)
 
 
 class PathSimulatorMover(SubPathMover):
