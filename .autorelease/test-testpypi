@@ -1,4 +1,5 @@
 #!/bin/bash
 
 python -m pip install pytest sqlalchemy
+python -c "import openpathsampling"
 py.test --pyargs openpathsampling.tests
