@@ -35,7 +35,7 @@ import copy
 
 
 class TestPLUMED(object):
-    def setup(self):
+    def setup_method(self):
         if not HAS_PLUMED:
             pytest.skip("PLUMED module not installed.")
         if not HAS_OPENMM:
@@ -55,7 +55,7 @@ class TestPLUMED(object):
         if os.path.isfile("test.nc"):
             os.remove("test.nc")
 
-    def teardown(self):
+    def teardown_method(self):
         if os.path.isfile("test.nc"):
             os.remove("test.nc")
         root = os.listdir(".")

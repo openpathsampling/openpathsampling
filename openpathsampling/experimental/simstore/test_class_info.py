@@ -42,7 +42,7 @@ class TestClassInfo(object):
         assert class_info.lookup_result == MockUUIDObject
 
 class SerializationSchemeTester(object):
-    def setup(self):
+    def setup_method(self):
         self.data_obj = all_objects['int']  # doesn't really matter which
         # technically, the next two should behave identically, except
         # name/UUID; but as different types they can be serailized

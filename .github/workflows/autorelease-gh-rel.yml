@@ -1,4 +1,4 @@
-# Vendored from Autorelease 0.3.2
+# Vendored from Autorelease 0.5.0
 # Update by updating Autorelease and running `autorelease vendor actions`
 name: "Autorelease Release"
 on:

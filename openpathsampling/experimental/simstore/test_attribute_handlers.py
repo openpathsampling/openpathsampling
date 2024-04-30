@@ -5,7 +5,7 @@ import numpy as np
 from .attribute_handlers import *
 
 class TestStandardHandler(object):
-    def setup(self):
+    def setup_method(self):
         self.obj = {'str': 'foo',
                     'int': 42,
                     'float': 3.14159,
@@ -30,7 +30,7 @@ class TestStandardHandler(object):
 
 
 class TestNDArrayHandler(object):
-    def setup(self):
+    def setup_method(self):
         self.data = np.array([[0.0, 1.0, 2.0], [3.0, 4.0, 5.0]])
         self.ndarray_handler = NDArrayHandler(('float32', (2,3)))
 

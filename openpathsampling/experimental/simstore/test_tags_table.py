@@ -17,7 +17,7 @@ class IntHolder(StorableObject):
         self.value = value
 
 class TestTagsTable(object):
-    def setup(self):
+    def setup_method(self):
         json_ser = JSONSerializerDeserializer([uuid_object_codec])
         # TODO: add tags to serialization schema
         serialization_schema = SerializationSchema(

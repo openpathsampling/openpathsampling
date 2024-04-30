@@ -288,7 +288,7 @@ class TreeMixin(object):
         Returns
         -------
         list :
-            tree (fnc(node, \*\*kwargs))
+            tree (fnc(node, **kwargs))
             nested list of the results of the map
         """
         return [fnc(self)] + [ch.map_tree(fnc) for ch in self._subnodes]
@@ -349,7 +349,7 @@ class TreeMixin(object):
 
         Returns
         -------
-        list (fnc(node, \*\*kwargs))
+        list (fnc(node, **kwargs))
             flattened list of the results of the map
 
         Notes
@@ -372,7 +372,7 @@ class TreeMixin(object):
 
         Parameters
         ----------
-        fnc : function(node, \*\*kwargs)
+        fnc : function(node, **kwargs)
             the function run at each node. It is given the node and the
             optional (fixed) parameters
         level : int
@@ -408,7 +408,7 @@ class TreeMixin(object):
 
         Parameters
         ----------
-        fnc : function(node, \*\*kwargs)
+        fnc : function(node, **kwargs)
             the function run at each node. It is given the node and the
             optional parameters
         kwargs : named arguments
@@ -416,7 +416,7 @@ class TreeMixin(object):
 
         Returns
         -------
-        list (fnc(node, \*\*kwargs))
+        list (fnc(node, **kwargs))
             flattened list of the results of the map
 
         Notes
@@ -439,7 +439,7 @@ class TreeMixin(object):
 
         Parameters
         ----------
-        fnc : function(node, \*\*kwargs)
+        fnc : function(node, **kwargs)
             the function run at each node. It is given the node and the
             optional parameters
         level : int

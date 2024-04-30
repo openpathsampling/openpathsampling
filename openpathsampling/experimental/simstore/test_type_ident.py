@@ -9,7 +9,7 @@ class TestStandardTyping(object):
     # this tests everything in STANDARD_TYPING; it's a little more
     # integration test than unit, but the individual tests ensure that each
     # unit is tested
-    def setup(self):
+    def setup_method(self):
         self.objects = {
             'int': ('int', 5),
             'float': ('float', 2.3),

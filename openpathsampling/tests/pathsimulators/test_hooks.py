@@ -1,7 +1,4 @@
 from __future__ import absolute_import
-from nose.tools import (assert_equal, assert_not_equal, assert_almost_equal,
-                        raises)
-from nose.plugins.skip import Skip, SkipTest
 
 import io
 import sys
@@ -105,15 +102,15 @@ class TestPathSimulatorHook(object):
         sim = TrivialPathSimulator(storage=None)
         sim.attach_hook(hook)
         for k in sim.hook_names:
-            assert_equal(len(sim.hooks[k]), 1)
+            assert len(sim.hooks[k]) == 1
 
     def test_attach_hooks_method(self):
         hook_instance = StupiderHook()
         sim = NoStepHookPathSimulator(storage=None)
         sim.attach_hook(hook_instance.hook_method, hook_for='extra_hook')
-        assert_not_equal(hook_instance.foo, "foo")
+        assert hook_instance.foo != "foo"
         sim.run(1)
-        assert_equal(hook_instance.foo, "foo")
+        assert hook_instance.foo == "foo"
 
     def test_trivial_simulation_hooks(self):
         sim = TrivialPathSimulator(storage=None)
@@ -125,31 +122,31 @@ class TestPathSimulatorHook(object):
                                                              "foo")
         sim.attach_hook(extra, hook_for='after_simulation')
         # before running, check that state is as expected
-        assert_equal(stupid.began_simulation, False)
-        assert_equal(stupid.finished_simulation, False)
-        assert_equal(stupid.began_steps, 0)
-        assert_equal(stupid.finished_steps, 0)
-        assert_not_equal(stupider.foo, "foo")
+        assert stupid.began_simulation is False
+        assert stupid.finished_simulation is False
+        assert stupid.began_steps == 0
+        assert stupid.finished_steps == 0
+        assert stupider.foo != "foo"
         # run
         sim.run(3)
         # check results
-        assert_equal(stupid.began_simulation, True)
-        assert_equal(stupid.finished_simulation, True)
-        assert_equal(stupid.began_steps, 3)
-        assert_equal(stupid.finished_steps, 3)
-        assert_equal(stupider.foo, "foo")
+        assert stupid.began_simulation is True
+        assert stupid.finished_simulation is True
+        assert stupid.began_steps == 3
+        assert stupid.finished_steps == 3
+        assert stupider.foo == "foo"
 
-    @raises(TypeError)
     def test_bad_extra_hook_method(self):
         sim = NoStepHookPathSimulator(storage=None)
         stupid = StupidHook()
-        sim.attach_hook(stupid)
+        with pytest.raises(TypeError):
+            sim.attach_hook(stupid)
 
-    @raises(TypeError)
     def test_bad_hook_name(self):
         sim = NoStepHookPathSimulator(storage=None)
         stupider = StupiderHook()
-        sim.attach_hook(stupider.hook_method, "blah")
+        with pytest.raises(TypeError):
+            sim.attach_hook(stupider.hook_method, "blah")
 
     def test_no_step_hook_simulation_hooks(self):
         sim = NoStepHookPathSimulator(storage=None)
@@ -158,19 +155,19 @@ class TestPathSimulatorHook(object):
         sim.attach_hook(stupid.before_simulation,
                         hook_for='before_simulation')
         sim.attach_hook(stupider.hook_method, hook_for='extra_hook')
-        assert_equal(len(sim.hooks), len(sim.hook_names))
+        assert len(sim.hooks) == len(sim.hook_names)
         for hook in sim.hooks:
-            assert_equal(len(sim.hooks[hook]), 1)
+            assert len(sim.hooks[hook]) == 1
 
-        assert_equal(stupid.began_simulation, False)
-        assert_not_equal(stupider.foo, "foo")
+        assert stupid.began_simulation is False
+        assert stupider.foo != "foo"
         sim.run(1)
-        assert_equal(stupid.began_simulation, True)
-        assert_equal(stupider.foo, "foo")
+        assert stupid.began_simulation is True
+        assert stupider.foo == "foo"
 
 
 class TestSelfOrSimProperty(object):
-    def setup(self):
+    def setup_method(self):
         self.attr_name = "test_attr"
         self.simulation = MagicMock(test_attr="sim_attr")
         self.sans_attr_sans_sim = MagicMock(_test_attr=None, _simulation=None)
@@ -226,7 +223,7 @@ class TestSelfOrSimProperty(object):
 
 
 class TestStorageHook(object):
-    def setup(self):
+    def setup_method(self):
         self.storage = MagicMock(spec=["stash", "sync_all"])
         self.old_storage = MagicMock(spec=["save", "sync_all"])
         self.empty_hook = StorageHook()
@@ -267,7 +264,7 @@ class TestStorageHook(object):
 
 
 class TestShootFromSnapshotsOutputHook(object):
-    def setup(self):
+    def setup_method(self):
         if sys.version_info < (3,):
             self.stream = io.BytesIO()
         else:
@@ -295,7 +292,7 @@ class TestShootFromSnapshotsOutputHook(object):
 
 
 class TestSampleSetSanityCheckHook(object):
-    def setup(self):
+    def setup_method(self):
         self.simulation = MagicMock(save_frequency=10)
         self.empty_hook = SampleSetSanityCheckHook()
         self.hook = SampleSetSanityCheckHook(frequency=10)
@@ -319,7 +316,7 @@ class TestSampleSetSanityCheckHook(object):
 
 
 class TestLiveVisualizerHook(object):
-    def setup(self):
+    def setup_method(self):
         self.live_visualizer = MagicMock()
         self.simulation = MagicMock(live_visualizer=self.live_visualizer,
                                     status_update_frequency=2)
@@ -363,7 +360,7 @@ class TestLiveVisualizerHook(object):
 
 
 class TestPathSamplingOutputHook(object):
-    def setup(self):
+    def setup_method(self):
         if sys.version_info < (3,):
             self.stream = io.BytesIO()
         else:
@@ -434,7 +431,7 @@ class TestPathSamplingOutputHook(object):
 
 
 class TestGraciousKillHook(object):
-    def setup(self):
+    def setup_method(self):
         self.final_call = MagicMock()
         self.nocall_final_call = MagicMock()
         self.simulation = MagicMock(storage=MagicMock(close=MagicMock(),

@@ -56,7 +56,7 @@ def test_extract_info_from_default_report():
 
 
 class TestVisitAllStatesEnsemble(object):
-    def setup(self):
+    def setup_method(self):
         self.cv = paths.FunctionCV("x", lambda x: x.xyz[0][0])
         vol_A = paths.CVDefinedVolume(self.cv, 0.0, 1.0).named("A")
         vol_B = paths.CVDefinedVolume(self.cv, 2.0, 3.0).named("B")

@@ -14,7 +14,7 @@ import numpy as np
 
 
 class SelectorTest(object):
-    def setup(self):
+    def setup_method(self):
         self.mytraj = make_1d_traj(coordinates=[-0.5, 0.1, 0.2, 0.3, 0.5],
                                    velocities=[1.0, 1.0, 1.0, 1.0, 1.0])
         self.dyn = CalvinistDynamics([-0.5, -0.4, -0.3, -0.2, -0.1,
@@ -69,8 +69,8 @@ class TestShootingPointSelector(SelectorTest):
 
 
 class TestGaussianBiasSelector(SelectorTest):
-    def setup(self):
-        super(TestGaussianBiasSelector, self).setup()
+    def setup_method(self):
+        super(TestGaussianBiasSelector, self).setup_method()
         self.cv = paths.FunctionCV("Id", lambda x: x.xyz[0][0])
         self.sel = GaussianBiasSelector(self.cv, alpha=2.0, l_0=0.25)
         self.f = [
@@ -102,8 +102,8 @@ class TestGaussianBiasSelector(SelectorTest):
 
 
 class TestBiasedSelector(SelectorTest):
-    def setup(self):
-        super(TestBiasedSelector, self).setup()
+    def setup_method(self):
+        super(TestBiasedSelector, self).setup_method()
         self.f = {
             'gaussian': [
                 0.32465246735834974,  # = exp(-2.0*(-0.5-0.25)**2)
@@ -202,7 +202,7 @@ class TestFinalFrameSelector(SelectorTest):
 
 
 class TestConstrainedSelector(SelectorTest):
-    def setup(self):
+    def setup_method(self):
         cvx = paths.FunctionCV('ID', lambda snap: snap.xyz[0][0])
         vol = paths.CVDefinedVolume(cvx, float('-inf'), 0)
         self.sel = InterfaceConstrainedSelector(vol)

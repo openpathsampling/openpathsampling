@@ -5,10 +5,7 @@ from builtins import zip
 from builtins import range
 from builtins import object
 from past.utils import old_div
-from nose.tools import (assert_equal, assert_not_equal, assert_almost_equal,
-                        assert_in, raises, assert_is, assert_is_not,
-                        assert_true)
-from nose.plugins.skip import Skip, SkipTest
+from numpy.testing import assert_almost_equal
 from .test_helpers import (true_func, assert_equal_array_array,
                            make_1d_traj, assert_items_equal)
 
@@ -92,7 +89,7 @@ def _make_null_mover_step(mccycle, path_sim_mover, null_mover):
 
 
 class TestMoveAcceptanceAnalysis(object):
-    def setup(self):
+    def setup_method(self):
         self.HAS_TQDM = paths.progress.HAS_TQDM
         paths.progress.HAS_TQDM = False
         paths.InterfaceSet._reset()
@@ -146,7 +143,7 @@ class TestMoveAcceptanceAnalysis(object):
                          'normal': acceptance,
                          'with_null': acceptance_null}
 
-    def teardown(self):
+    def teardown_method(self):
         paths.progress.HAS_TQDM = self.HAS_TQDM
 
     @pytest.mark.parametrize('step_num', [0, 1, 2, 3, 4])
@@ -391,7 +388,7 @@ class TestMoveAcceptanceAnalysis(object):
 
 
 class TestMoveScheme(object):
-    def setup(self):
+    def setup_method(self):
         paths.InterfaceSet._reset()
         cvA = paths.FunctionCV(name="xA", f=lambda s : s.xyz[0][0])
         cvB = paths.FunctionCV(name="xB", f=lambda s : -s.xyz[0][0])
@@ -414,69 +411,69 @@ class TestMoveScheme(object):
         shootstrat = OneWayShootingStrategy()
         repexstrat = NearestNeighborRepExStrategy()
         defaultstrat = OrganizeByMoveGroupStrategy()
-        assert_equal(len(list(self.scheme.strategies.keys())), 0)
+        assert len(list(self.scheme.strategies.keys())) == 0
         self.scheme.append(shootstrat)
         self.scheme.append(repexstrat)
         self.scheme.append(defaultstrat)
 
         strats = self.scheme.strategies
-        assert_equal(len(list(strats.keys())), 3)
-        pairs = [(levels.MOVER, shootstrat), (levels.SIGNATURE, repexstrat), 
+        assert len(list(strats.keys())) == 3
+        pairs = [(levels.MOVER, shootstrat), (levels.SIGNATURE, repexstrat),
                  (levels.GLOBAL, defaultstrat)]
         for (k, v) in pairs:
-            assert_in(v, strats[k])
+            assert v in strats[k]
 
     def test_append_groups_default_levels(self):
         shootstrat = OneWayShootingStrategy()
         repexstrat = NearestNeighborRepExStrategy()
         defaultstrat = OrganizeByMoveGroupStrategy()
-        assert_equal(len(list(self.scheme.strategies.keys())), 0)
+        assert len(list(self.scheme.strategies.keys())) == 0
         self.scheme.append([shootstrat, repexstrat, defaultstrat])
 
         strats = self.scheme.strategies
-        assert_equal(len(list(strats.keys())), 3)
-        pairs = [(levels.MOVER, shootstrat), (levels.SIGNATURE, repexstrat), 
+        assert len(list(strats.keys())) == 3
+        pairs = [(levels.MOVER, shootstrat), (levels.SIGNATURE, repexstrat),
                  (levels.GLOBAL, defaultstrat)]
         for (k, v) in pairs:
-            assert_in(v, strats[k])
+            assert v in strats[k]
 
 
     def test_append_individuals_custom_levels(self):
         shootstrat = OneWayShootingStrategy()
         repexstrat = NearestNeighborRepExStrategy()
         defaultstrat = OrganizeByMoveGroupStrategy()
-        assert_equal(len(list(self.scheme.strategies.keys())), 0)
+        assert len(list(self.scheme.strategies.keys())) == 0
         self.scheme.append(shootstrat, 60)
         self.scheme.append(repexstrat, 60)
         self.scheme.append(defaultstrat, 60)
 
         strats = self.scheme.strategies
-        assert_equal(len(list(strats.keys())), 1)
+        assert len(list(strats.keys())) == 1
         assert_items_equal(strats[60], [shootstrat, repexstrat, defaultstrat])
 
     def test_append_groups_same_custom_level(self):
         shootstrat = OneWayShootingStrategy()
         repexstrat = NearestNeighborRepExStrategy()
         defaultstrat = OrganizeByMoveGroupStrategy()
-        assert_equal(len(list(self.scheme.strategies.keys())), 0)
+        assert len(list(self.scheme.strategies.keys())) == 0
         self.scheme.append([shootstrat, repexstrat, defaultstrat], 60)
 
         strats = self.scheme.strategies
-        assert_equal(len(list(strats.keys())), 1)
+        assert len(list(strats.keys())) == 1
         assert_items_equal(strats[60], [shootstrat, repexstrat, defaultstrat])
 
     def test_append_group_different_custom_levels(self):
         shootstrat = OneWayShootingStrategy()
         repexstrat = NearestNeighborRepExStrategy()
         defaultstrat = OrganizeByMoveGroupStrategy()
-        assert_equal(len(list(self.scheme.strategies.keys())), 0)
-        self.scheme.append([shootstrat, repexstrat, defaultstrat], 
+        assert len(list(self.scheme.strategies.keys())) == 0
+        self.scheme.append([shootstrat, repexstrat, defaultstrat],
                            [45, 55, 65])
 
         strats = self.scheme.strategies
-        assert_equal(len(list(strats.keys())), 3)
+        assert len(list(strats.keys())) == 3
         for (k, v) in [(45, shootstrat), (55, repexstrat), (65, defaultstrat)]:
-            assert_in(v, strats[k])
+            assert v in strats[k]
 
     def test_apply_strategy(self):
         if self.scheme.movers == {}:
@@ -500,36 +497,36 @@ class TestMoveScheme(object):
 
         self.scheme.apply_strategy(shoot_strat_1)
         assert_items_equal(list(self.scheme.movers.keys()), ['shooting'])
-        assert_equal(len(self.scheme.movers['shooting']), 3)
+        assert len(self.scheme.movers['shooting']) == 3
 
         self.scheme.apply_strategy(shoot_strat_2)
         assert_items_equal(list(self.scheme.movers.keys()), ['shooting'])
-        assert_equal(len(self.scheme.movers['shooting']), 7)
+        assert len(self.scheme.movers['shooting']) == 7
         old_movers = copy.copy(self.scheme.movers['shooting'])
 
         self.scheme.apply_strategy(shoot_strat_3)
         assert_items_equal(list(self.scheme.movers.keys()), ['shooting'])
-        assert_equal(len(self.scheme.movers['shooting']), 7)
+        assert len(self.scheme.movers['shooting']) == 7
         new_movers = self.scheme.movers['shooting']
         for (o, n) in zip(old_movers, new_movers):
-            assert_equal(o is n, False)
+            assert o is not n
 
         shoot_strat_3.replace_signatures = True
         self.scheme.apply_strategy(shoot_strat_3)
-        assert_equal(len(self.scheme.movers['shooting']), 6)
+        assert len(self.scheme.movers['shooting']) == 6
 
         self.scheme.movers = {}
         shoot_strat_1.set_replace(True)
         self.scheme.apply_strategy(shoot_strat_1)
-        assert_equal(len(self.scheme.movers['shooting']), 3)
+        assert len(self.scheme.movers['shooting']) == 3
         old_movers = copy.copy(self.scheme.movers['shooting'])
 
         shoot_strat_3.replace_signatures = False
         self.scheme.apply_strategy(shoot_strat_3)
-        assert_equal(len(self.scheme.movers['shooting']), 6)
+        assert len(self.scheme.movers['shooting']) == 6
         new_movers = self.scheme.movers['shooting']
         for (o, n) in zip(old_movers, new_movers):
-            assert_equal(o is n, False)
+            assert o is not n
 
     def test_move_decision_tree(self):
         shoot = OneWayShootingStrategy()
@@ -537,24 +534,24 @@ class TestMoveScheme(object):
         default = OrganizeByMoveGroupStrategy()
         self.scheme.append([default, shoot, repex])
 
-        assert_equal(self.scheme.root_mover, None)
+        assert self.scheme.root_mover is None
         root = self.scheme.move_decision_tree()
-        assert_not_equal(self.scheme.root_mover, None)
+        assert self.scheme.root_mover is not None
 
-        assert_equal(len(root.movers), 2)
+        assert len(root.movers) == 2
         names = ['ShootingChooser', 'RepexChooser']
         name_dict = {root.movers[i].name : i for i in range(len(root.movers))}
         for name in names:
-            assert_in(name, list(name_dict.keys()))
+            assert name in list(name_dict.keys())
 
-        assert_equal(len(root.movers[name_dict['ShootingChooser']].movers), 6)
-        assert_equal(len(root.movers[name_dict['RepexChooser']].movers), 4)
+        assert len(root.movers[name_dict['ShootingChooser']].movers) == 6
+        assert len(root.movers[name_dict['RepexChooser']].movers) == 4
 
         new_root = self.scheme.move_decision_tree()
-        assert_is(new_root, root)
+        assert new_root is root
 
         new_root = self.scheme.move_decision_tree(rebuild=True)
-        assert_is_not(new_root, root)
+        assert new_root is not root
 
     def test_repex_style_switching(self):
         nn_repex = NearestNeighborRepExStrategy()
@@ -563,15 +560,15 @@ class TestMoveScheme(object):
 
         self.scheme.append([default, nn_repex])
         root = self.scheme.move_decision_tree(rebuild=True)
-        assert_equal(len(self.scheme.movers['repex']), 4)
+        assert len(self.scheme.movers['repex']) == 4
 
         self.scheme.append(all_repex, force=True)
         root = self.scheme.move_decision_tree(rebuild=True)
-        assert_equal(len(self.scheme.movers['repex']), 6)
+        assert len(self.scheme.movers['repex']) == 6
 
         self.scheme.append(nn_repex, force=True)
         root = self.scheme.move_decision_tree(rebuild=True)
-        assert_equal(len(self.scheme.movers['repex']), 4)
+        assert len(self.scheme.movers['repex']) == 4
 
     def test_build_balance_partners(self):
         ensA = self.scheme.network.sampling_transitions[0].ensembles[0]
@@ -582,15 +579,14 @@ class TestMoveScheme(object):
         self.scheme.append(strategies.OrganizeByMoveGroupStrategy())
         root = self.scheme.move_decision_tree()
         self.scheme.build_balance_partners()
-        assert_equal(self.scheme.balance_partners[hopAB], [hopBA])
-        assert_equal(self.scheme.balance_partners[hopBA], [hopAB])
+        assert self.scheme.balance_partners[hopAB] == [hopBA]
+        assert self.scheme.balance_partners[hopBA] == [hopAB]
 
-    @raises(RuntimeWarning)
     def test_build_balance_partners_premature(self):
         self.scheme.movers = {}
-        self.scheme.build_balance_partners()
+        with pytest.raises(RuntimeWarning):
+            self.scheme.build_balance_partners()
 
-    @raises(RuntimeWarning)
     def test_build_balance_partners_no_partner(self):
         ensA = self.scheme.network.sampling_transitions[0].ensembles[0]
         ensB = self.scheme.network.sampling_transitions[0].ensembles[1]
@@ -599,9 +595,9 @@ class TestMoveScheme(object):
         self.scheme.movers['hop'] = [hopAB]
         self.scheme.append(strategies.OrganizeByMoveGroupStrategy())
         root = self.scheme.move_decision_tree()
-        self.scheme.build_balance_partners()
+        with pytest.raises(RuntimeWarning):
+            self.scheme.build_balance_partners()
 
-    @raises(RuntimeWarning)
     def test_build_balance_partners_two_partners(self):
         ensA = self.scheme.network.sampling_transitions[0].ensembles[0]
         ensB = self.scheme.network.sampling_transitions[0].ensembles[1]
@@ -611,7 +607,8 @@ class TestMoveScheme(object):
         self.scheme.movers['hop'] = [hopAB, hopBA, hopAB2]
         self.scheme.append(strategies.OrganizeByMoveGroupStrategy())
         root = self.scheme.move_decision_tree()
-        self.scheme.build_balance_partners()
+        with pytest.raises(RuntimeWarning):
+            self.scheme.build_balance_partners()
 
     def test_sanity_check_sane(self):
         self.scheme.append([NearestNeighborRepExStrategy(),
@@ -620,7 +617,6 @@ class TestMoveScheme(object):
         root = self.scheme.move_decision_tree()
         self.scheme.sanity_check()
 
-    @raises(AssertionError)
     def test_sanity_check_unused_sampling(self):
         ensemble_subset = self.scheme.network.sampling_transitions[0].ensembles
         self.scheme.append([
@@ -628,9 +624,9 @@ class TestMoveScheme(object):
             OrganizeByMoveGroupStrategy()
         ])
         root = self.scheme.move_decision_tree()
-        self.scheme.sanity_check()
+        with pytest.raises(AssertionError):
+            self.scheme.sanity_check()
 
-    @raises(AssertionError)
     def test_sanity_check_choice_prob_fails(self):
         self.scheme.append([NearestNeighborRepExStrategy(),
                             OneWayShootingStrategy(),
@@ -638,9 +634,9 @@ class TestMoveScheme(object):
         root = self.scheme.move_decision_tree()
         key0 = list(self.scheme.choice_probability.keys())[0]
         self.scheme.choice_probability[key0] = 0.0
-        self.scheme.sanity_check()
+        with pytest.raises(AssertionError):
+            self.scheme.sanity_check()
 
-    @raises(AssertionError)
     def test_sanity_check_duplicated_movers(self):
         ensemble_subset = self.scheme.network.sampling_transitions[0].ensembles
         self.scheme.append([
@@ -649,17 +645,18 @@ class TestMoveScheme(object):
         ])
         root = self.scheme.move_decision_tree()
         self.scheme.movers['foo'] = [self.scheme.movers['shooting'][0]]
-        self.scheme.sanity_check()
+        with pytest.raises(AssertionError):
+            self.scheme.sanity_check()
 
-    @raises(TypeError)
     def test_select_movers_no_choice_probability(self):
         self.scheme.append([OneWayShootingStrategy(),
                             OrganizeByMoveGroupStrategy()])
-        movers = self.scheme._select_movers('shooting')
+        with pytest.raises(TypeError):
+            movers = self.scheme._select_movers('shooting')
 
     def test_select_movers(self):
         self.scheme.append([
-            OneWayShootingStrategy(), 
+            OneWayShootingStrategy(),
             NearestNeighborRepExStrategy(),
             OrganizeByMoveGroupStrategy()
         ])
@@ -667,17 +664,17 @@ class TestMoveScheme(object):
         some_shooters = self.scheme.movers['shooting'][0:2]
 
         movers = self.scheme._select_movers('shooting')
-        assert_equal(movers, self.scheme.movers['shooting'])
+        assert movers == self.scheme.movers['shooting']
 
         movers = self.scheme._select_movers(some_shooters)
-        assert_equal(movers, some_shooters)
+        assert movers == some_shooters
 
         movers = self.scheme._select_movers(some_shooters[0])
-        assert_equal(movers, [some_shooters[0]])
+        assert movers == [some_shooters[0]]
 
     def test_n_trials_for_steps(self):
         self.scheme.append([
-            OneWayShootingStrategy(), 
+            OneWayShootingStrategy(),
             NearestNeighborRepExStrategy(),
             OrganizeByMoveGroupStrategy()
         ])
@@ -728,15 +725,15 @@ class TestMoveScheme(object):
 
 
 class TestDefaultScheme(object):
-    def setup(self):
+    def setup_method(self):
         paths.InterfaceSet._reset()
         cvA = paths.FunctionCV(name="xA", f=lambda s : s.xyz[0][0])
         cvB = paths.FunctionCV(name="xB", f=lambda s : -s.xyz[0][0])
         self.stateA = paths.CVDefinedVolume(cvA, float("-inf"), -0.5)
         self.stateB = paths.CVDefinedVolume(cvB, float("-inf"), -0.5)
-        interfacesA = paths.VolumeInterfaceSet(cvA, float("-inf"), 
+        interfacesA = paths.VolumeInterfaceSet(cvA, float("-inf"),
                                                [-0.5, -0.3, -0.1])
-        interfacesB = paths.VolumeInterfaceSet(cvB, float("-inf"), 
+        interfacesB = paths.VolumeInterfaceSet(cvB, float("-inf"),
                                                [-0.5, -0.3, -0.1])
         self.network = paths.MSTISNetwork(
             [(self.stateA, interfacesA),
@@ -760,35 +757,28 @@ class TestDefaultScheme(object):
             'Ms_outer_shootingChooser' : paths.OneWayShootingMover
         }
         names = list(chooser_type_dict.keys())
-        assert_equal(len(root.movers), len(names))
+        assert len(root.movers) == len(names)
 
         name_dict = {root.movers[i].name : i for i in range(len(root.movers))}
         for name in names:
-            assert_in(name, list(name_dict.keys()))
+            assert name in list(name_dict.keys())
 
         n_normal_repex = 4
         n_msouter_repex = 2
         n_repex = n_normal_repex + n_msouter_repex
 
-        assert_equal(
-            len(root.movers[name_dict['ShootingChooser']].movers), 6
-        )
-        assert_equal(
-            len(root.movers[name_dict['PathreversalChooser']].movers), 7
-        )
-        assert_equal(
-            len(root.movers[name_dict['RepexChooser']].movers), n_repex
-        )
-        assert_equal(
-            len(root.movers[name_dict['MinusChooser']].movers), 2
-        )
-        assert_equal(
-            len(root.movers[name_dict['Ms_outer_shootingChooser']].movers), 1
+        assert len(root.movers[name_dict['ShootingChooser']].movers) == 6
+        assert len(root.movers[name_dict['PathreversalChooser']].movers) == 7
+        assert len(root.movers[name_dict['RepexChooser']].movers) == n_repex
+        assert len(root.movers[name_dict['MinusChooser']].movers) == 2
+        assert (
+            len(root.movers[name_dict['Ms_outer_shootingChooser']].movers)
+            == 1
         )
 
         for choosername in names:
             for mover in root.movers[name_dict[choosername]].movers:
-                assert_equal(type(mover), chooser_type_dict[choosername])
+                assert type(mover) == chooser_type_dict[choosername]
 
     def test_default_scheme_no_ms_outer(self):
         scheme = DefaultScheme(self.no_ms_outer)
@@ -800,28 +790,20 @@ class TestDefaultScheme(object):
             'MinusChooser' : paths.MinusMover
         }
         names = list(chooser_type_dict.keys())
-        assert_equal(len(root.movers), len(names))
+        assert len(root.movers) == len(names)
 
         name_dict = {root.movers[i].name : i for i in range(len(root.movers))}
         for name in names:
-            assert_in(name, list(name_dict.keys()))
+            assert name in list(name_dict.keys())
 
         n_normal_repex = 4
         n_msouter_repex = 0
         n_repex = n_normal_repex + n_msouter_repex
 
-        assert_equal(
-            len(root.movers[name_dict['ShootingChooser']].movers), 6
-        )
-        assert_equal(
-            len(root.movers[name_dict['PathreversalChooser']].movers), 6
-        )
-        assert_equal(
-            len(root.movers[name_dict['RepexChooser']].movers), n_repex
-        )
-        assert_equal(
-            len(root.movers[name_dict['MinusChooser']].movers), 2
-        )
+        assert len(root.movers[name_dict['ShootingChooser']].movers) == 6
+        assert len(root.movers[name_dict['PathreversalChooser']].movers) == 6
+        assert len(root.movers[name_dict['RepexChooser']].movers) == n_repex
+        assert len(root.movers[name_dict['MinusChooser']].movers) == 2
 
     def test_default_sanity(self):
         scheme = DefaultScheme(self.network)
@@ -832,13 +814,13 @@ class TestDefaultScheme(object):
         scheme = DefaultScheme(self.network)
         root = scheme.move_decision_tree()
         hidden = scheme.find_hidden_ensembles()
-        assert_equal(len(hidden), 2)
+        assert len(hidden) == 2
 
     def test_default_unused_ensembles(self):
         scheme = DefaultScheme(self.network)
         root = scheme.move_decision_tree()
         unused = scheme.find_unused_ensembles()
-        assert_equal(len(unused), 0) # will change when minus/msouter
+        assert len(unused) == 0  # will change when minus/msouter
 
     def test_default_balance_partners(self):
         scheme = DefaultScheme(self.network)
@@ -847,7 +829,7 @@ class TestDefaultScheme(object):
         # by default, every mover is its own balance partner
         for group in list(scheme.movers.values()):
             for mover in group:
-                assert_equal(scheme.balance_partners[mover], [mover])
+                assert scheme.balance_partners[mover] == [mover]
 
     def test_default_choice_probability(self):
         scheme = DefaultScheme(self.network)
@@ -862,7 +844,7 @@ class TestDefaultScheme(object):
 
         assert_almost_equal(sum(scheme.choice_probability.values()), 1.0)
 
-        tot_norm = sum([default_group_weights[group] 
+        tot_norm = sum([default_group_weights[group]
                         for group in scheme.movers])
 
         prob_shoot0 = scheme.choice_probability[scheme.movers['shooting'][0]]
@@ -878,7 +860,7 @@ class TestDefaultScheme(object):
     def test_initial_conditions_from_trajectory(self):
         scheme = DefaultScheme(self.network)
         # root = scheme.move_decision_tree()
-        assert_equal(len(scheme.list_initial_ensembles()), 9)
+        assert len(scheme.list_initial_ensembles()) == 9
 
         traj1 = make_1d_traj([-0.6, -0.2, -0.6])
         traj2 = make_1d_traj([-0.6, -0.2, -0.05, -0.4, -0.6])
@@ -897,12 +879,12 @@ class TestDefaultScheme(object):
 
             sample_set.sanity_check()
 
-            assert_equal(len(sample_set), len(expected))
+            assert len(sample_set) == len(expected)
 
             for ensemble, traj in zip(ensembles, expected):
                 # print ensemble.name, sample_set[ensemble].trajectory.xyz[:,0,0], traj.xyz[:, 0,0],
                 # print hex(id(traj)), hex(id(sample_set[ensemble].trajectory.xyz[:,0,0]))
-                assert_equal(sample_set[ensemble].trajectory, traj)
+                assert sample_set[ensemble].trajectory == traj
 
         transAB = transBA = None
         for trans in self.network.sampling_transitions:
@@ -974,21 +956,21 @@ class TestDefaultScheme(object):
         )
 
         init_cond.sanity_check()
-        assert_equal(len(init_cond), 7)
+        assert len(init_cond) == 7
 
         for ensemble, traj in zip(ensembles[:3], [traj1, traj2, traj3]):
-            assert_equal(init_cond[ensemble].trajectory, traj)
+            assert init_cond[ensemble].trajectory == traj
         for ensemble, traj in zip(ensembles[4:], [traj3r] * 3):
-            assert_equal(init_cond[ensemble].trajectory, traj)
+            assert init_cond[ensemble].trajectory == traj
 
         # because of the way the scheme ensembles are creating involving a
         # set, the order in which the ensemble are created changes.
         # in some cases traj3 is used and hence avoided in the outer
         # in some cases traj3r, but both are fine.
         try:
-            assert_equal(init_cond[ensembles[3]].trajectory, traj3)
+            assert init_cond[ensembles[3]].trajectory == traj3
         except AssertionError:
-            assert_equal(init_cond[ensembles[3]].trajectory, traj3r)
+            assert init_cond[ensembles[3]].trajectory == traj3r
 
         init_cond = scheme.initial_conditions_from_trajectories(
             trajectories=all_trajs,
@@ -997,17 +979,17 @@ class TestDefaultScheme(object):
             strategies=['get']
         )
         init_cond.sanity_check()
-        assert_equal(len(init_cond), 7)
+        assert len(init_cond) == 7
 
         for ensemble, traj in zip(ensembles[:3], [traj1, traj1r, traj3]):
-            assert_equal(init_cond[ensemble].trajectory, traj)
+            assert init_cond[ensemble].trajectory == traj
         for ensemble, traj in zip(ensembles[4:], [traj3r] * 3):
-            assert_equal(init_cond[ensemble].trajectory, traj)
+            assert init_cond[ensemble].trajectory == traj
 
         try:
-            assert_equal(init_cond[ensembles[3]].trajectory, traj3)
+            assert init_cond[ensembles[3]].trajectory == traj3
         except AssertionError:
-            assert_equal(init_cond[ensembles[3]].trajectory, traj3r)
+            assert init_cond[ensembles[3]].trajectory == traj3r
 
         # this one avoids reversed copies
         init_cond = scheme.initial_conditions_from_trajectories(
@@ -1061,23 +1043,22 @@ class TestDefaultScheme(object):
         traj3 = make_1d_traj([-0.6, -0.2, 0.2, 0.6])
         # cheating a bit, since we know what this gives
         init_cond = scheme.initial_conditions_from_trajectories(traj3)
-        assert_equal(len(init_cond), 7)
-        assert_equal(len(scheme.list_initial_ensembles()), 9)
+        assert len(init_cond) == 7
+        assert len(scheme.list_initial_ensembles()) == 9
         (missing, extra) = scheme.check_initial_conditions(init_cond)
-        assert_equal(len(missing), 2)
-        assert_equal(len(extra), 0)
+        assert len(missing) == 2
+        assert len(extra) == 0
         for ens in list(self.network.special_ensembles['minus'].keys()):
-            assert_in([ens], missing)
+            assert [ens] in missing
         init_cond.append_as_new_replica(
             paths.Sample(trajectory=traj3,
                          ensemble=paths.LengthEnsemble(4),
                          replica=None)
         )
         (missing, extra) = scheme.check_initial_conditions(init_cond)
-        assert_equal(len(missing), 2)
-        assert_equal(len(extra), 1)
+        assert len(missing) == 2
+        assert len(extra) == 1
 
-    @raises(AssertionError)
     def test_assert_initial_conditions(self):
         scheme = DefaultScheme(self.network)
         traj3 = make_1d_traj([-0.6, -0.2, 0.2, 0.6])
@@ -1087,7 +1068,8 @@ class TestDefaultScheme(object):
                          ensemble=paths.LengthEnsemble(4),
                          replica=None)
         )
-        scheme.assert_initial_conditions(init_cond)
+        with pytest.raises(AssertionError):
+            scheme.assert_initial_conditions(init_cond)
 
     def test_initial_conditions_report(self):
         scheme = DefaultScheme(self.network)
@@ -1106,21 +1088,21 @@ class TestDefaultScheme(object):
         expected_BA = start + missing_B + missing_A + finish
         result = scheme.initial_conditions_report(init_cond)
         try:
-            assert_equal(result, expected_AB)
+            assert result == expected_AB
         except AssertionError:
-            assert_equal(result, expected_BA)
+            assert result == expected_BA
 
 
 class TestLockedMoveScheme(object):
-    def setup(self):
+    def setup_method(self):
         paths.InterfaceSet._reset()
         cvA = paths.FunctionCV(name="xA", f=lambda s : s.xyz[0][0])
         cvB = paths.FunctionCV(name="xB", f=lambda s : -s.xyz[0][0])
         self.stateA = paths.CVDefinedVolume(cvA, float("-inf"), -0.5)
         self.stateB = paths.CVDefinedVolume(cvB, float("-inf"), -0.5)
-        interfacesA = paths.VolumeInterfaceSet(cvA, float("-inf"), 
+        interfacesA = paths.VolumeInterfaceSet(cvA, float("-inf"),
                                                [-0.5, -0.3, -0.1])
-        interfacesB = paths.VolumeInterfaceSet(cvB, float("-inf"), 
+        interfacesB = paths.VolumeInterfaceSet(cvB, float("-inf"),
                                                [-0.5, -0.3, -0.1])
         self.network = paths.MSTISNetwork(
             [(self.stateA, interfacesA),
@@ -1134,39 +1116,39 @@ class TestLockedMoveScheme(object):
 
     def test_initialization(self):
         scheme = LockedMoveScheme(self.root_mover, self.network)
-        assert_equal(scheme.network, self.network)
-        assert_equal(scheme.move_decision_tree(), self.root_mover)
+        assert scheme.network == self.network
+        assert scheme.move_decision_tree() == self.root_mover
 
     def test_build_move_decision_tree(self):
         scheme = LockedMoveScheme(self.root_mover, self.network)
         scheme.move_decision_tree(rebuild=True)
-        assert_equal(scheme.move_decision_tree(), self.root_mover)
+        assert scheme.move_decision_tree() == self.root_mover
 
-    @raises(TypeError)
     def test_append(self):
         scheme = LockedMoveScheme(self.root_mover, self.network)
-        scheme.append(AllSetRepExStrategy())
+        with pytest.raises(TypeError):
+            scheme.append(AllSetRepExStrategy())
 
-    @raises(TypeError)
     def test_apply_strategy(self):
         scheme = LockedMoveScheme(self.root_mover, self.network)
         strategy = AllSetRepExStrategy()
-        scheme.apply_strategy(strategy)
+        with pytest.raises(TypeError):
+            scheme.apply_strategy(strategy)
 
-    @raises(AttributeError)
     def test_choice_probability_fail(self):
         scheme = LockedMoveScheme(self.root_mover, self.network)
-        vals = scheme.choice_probability
+        with pytest.raises(AttributeError):
+            vals = scheme.choice_probability
 
     def test_choice_probability_works(self):
         scheme = LockedMoveScheme(self.root_mover, self.network)
         scheme.choice_probability = self.basic_scheme.choice_probability
         vals = scheme.choice_probability
 
-    @raises(AttributeError)
     def test_movers_fail(self):
         scheme = LockedMoveScheme(self.root_mover, self.network)
-        vals = scheme.movers
+        with pytest.raises(AttributeError):
+            vals = scheme.movers
 
     def test_movers_works(self):
         scheme = LockedMoveScheme(self.root_mover, self.network)
@@ -1175,15 +1157,15 @@ class TestLockedMoveScheme(object):
 
 
 class TestOneWayShootingMoveScheme(object):
-    def setup(self):
+    def setup_method(self):
         paths.InterfaceSet._reset()
         cvA = paths.FunctionCV(name="xA", f=lambda s : s.xyz[0][0])
         cvB = paths.FunctionCV(name="xB", f=lambda s : -s.xyz[0][0])
         self.stateA = paths.CVDefinedVolume(cvA, float("-inf"), -0.5)
         self.stateB = paths.CVDefinedVolume(cvB, float("-inf"), -0.5)
-        interfacesA = paths.VolumeInterfaceSet(cvA, float("-inf"), 
+        interfacesA = paths.VolumeInterfaceSet(cvA, float("-inf"),
                                                [-0.5, -0.3, -0.1])
-        interfacesB = paths.VolumeInterfaceSet(cvB, float("-inf"), 
+        interfacesB = paths.VolumeInterfaceSet(cvB, float("-inf"),
                                                [-0.5, -0.3, -0.1])
         self.network = paths.MSTISNetwork(
             [(self.stateA, interfacesA),
@@ -1196,8 +1178,8 @@ class TestOneWayShootingMoveScheme(object):
     def test_scheme(self):
         scheme = OneWayShootingMoveScheme(self.network)
         root = scheme.move_decision_tree()
-        assert_equal(len(scheme.movers), 1)
-        assert_equal(len(root.movers), 1)
+        assert len(scheme.movers) == 1
+        assert len(root.movers) == 1
 
     def test_sanity(self):
         scheme = OneWayShootingMoveScheme(self.network)
@@ -1209,16 +1191,16 @@ class TestOneWayShootingMoveScheme(object):
         root = scheme.move_decision_tree()
         unused = scheme.find_unused_ensembles()
         specials = self.network.special_ensembles
-        expected_unused = sum([list(specials[special_type].keys()) 
+        expected_unused = sum([list(specials[special_type].keys())
                                for special_type in specials], [])
-        assert_equal(set(expected_unused), set(unused))
+        assert set(expected_unused) == set(unused)
 
     def test_check_initial_conditions(self):
         scheme = OneWayShootingMoveScheme(self.network)
         traj3 = make_1d_traj([-0.6, -0.2, 0.2, 0.6])
         init_cond = scheme.initial_conditions_from_trajectories(traj3)
-        assert_equal(len(scheme.list_initial_ensembles()), 6)
-        assert_equal(len(init_cond), 6)
+        assert len(scheme.list_initial_ensembles()) == 6
+        assert len(init_cond) == 6
         scheme.assert_initial_conditions(init_cond)
-        assert_equal(scheme.initial_conditions_report(init_cond),
-                     "No missing ensembles.\nNo extra ensembles.\n")
+        assert (scheme.initial_conditions_report(init_cond)
+                == "No missing ensembles.\nNo extra ensembles.\n")
