@@ -395,7 +395,7 @@ class DynamicsEngine(StorableNamedObject):
 
         return stop
 
-    def generate(self, snapshot, running=None, direction=+1):
+    def generate(self, snapshot, running=None, direction=+1, checkpoint=None):
         r"""
         Generate a trajectory consisting of ntau segments of tau_steps in
         between storage of Snapshots.
