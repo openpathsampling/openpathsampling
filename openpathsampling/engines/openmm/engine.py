@@ -1,8 +1,7 @@
 import logging
 
-import simtk.openmm
-import simtk.openmm.app
-import simtk.unit as u
+from openpathsampling.integration_tools import openmm
+from openpathsampling.integration_tools import unit as u
 
 from openpathsampling.engines import DynamicsEngine, SnapshotDescriptor
 from openpathsampling.engines.openmm import tools
@@ -53,9 +52,9 @@ def restore_custom_integrator_interface(integrator):
 
 
 class OpenMMEngine(DynamicsEngine):
-    """OpenMM dynamics engine based on 'simtk.openmm` system and integrator.
+    """OpenMM dynamics engine based on OpenMM system and integrator.
 
-    The engine will create a :class:`simtk.openmm.app.Simulation` instance
+    The engine will create a :class:`openmm.app.Simulation` instance
     and uses this to generate new frames.
 
     """
@@ -86,9 +85,9 @@ class OpenMMEngine(DynamicsEngine):
         topology : openpathsampling.engines.topology.MDTrajTopology
             a template snapshots which provides the topology object to be used
             to create the openmm engine
-        system : simtk.openmm.app.System
+        system : openmm.app.System
             the openmm system object
-        integrator : simtk.openmm.Integrator
+        integrator : openmm.Integrator
             the openmm integrator object
         openmm_properties : dict
             optional setting for creating the openmm simuation object. Typical
@@ -158,7 +157,7 @@ class OpenMMEngine(DynamicsEngine):
 
         Parameters
         ----------
-        integrator : simtk.openmm.Integrator
+        integrator : openmm.Integrator
             the openmm integrator object
         openmm_properties : dict
             optional setting for creating the openmm simuation object. Typical
@@ -264,7 +263,7 @@ class OpenMMEngine(DynamicsEngine):
 
         Parameters
         ----------
-        platform : str or `simtk.openmm.Platform` or None
+        platform : str or :class:`openmm.Platform` or None
             either a string with a name of the platform or a platform object
             if None it will default to the fastest currently available platform
 
@@ -279,22 +278,30 @@ class OpenMMEngine(DynamicsEngine):
 
         if self._simulation is None:
             if type(platform) is str:
-                self._simulation = simtk.openmm.app.Simulation(
+                self._simulation = openmm.app.Simulation(
                     topology=self.topology.mdtraj.to_openmm(),
                     system=self.system,
                     integrator=self.integrator,
-                    platform=simtk.openmm.Platform.getPlatformByName(platform),
+                    platform=openmm.Platform.getPlatformByName(platform),
                     platformProperties=self.openmm_properties
                 )
             elif platform is None:
-                self._simulation = simtk.openmm.app.Simulation(
+                # as of OpenMM 8.1, we can't give an empty props dict when
+                # platform is None. This will still raise the internal
+                # OpenMM error is platform is None and properties are
+                # provided.
+                openmm_props = self.openmm_properties
+                if openmm_props == {}:
+                    openmm_props = None
+
+                self._simulation = openmm.app.Simulation(
                     topology=self.topology.mdtraj.to_openmm(),
                     system=self.system,
                     integrator=self.integrator,
-                    platformProperties=self.openmm_properties
+                    platformProperties=openmm_props,
                 )
             else:
-                self._simulation = simtk.openmm.app.Simulation(
+                self._simulation = openmm.app.Simulation(
                     topology=self.topology.mdtraj.to_openmm(),
                     system=self.system,
                     integrator=self.integrator,
@@ -309,13 +316,13 @@ class OpenMMEngine(DynamicsEngine):
     @staticmethod
     def available_platforms():
         return [
-            simtk.openmm.Platform.getPlatform(platform_idx).getName()
-            for platform_idx in range(simtk.openmm.Platform.getNumPlatforms())
+            openmm.Platform.getPlatform(platform_idx).getName()
+            for platform_idx in range(openmm.Platform.getNumPlatforms())
         ]
 
     def to_dict(self):
-        system_xml = simtk.openmm.XmlSerializer.serialize(self.system)
-        integrator_xml = simtk.openmm.XmlSerializer.serialize(self.integrator)
+        system_xml = openmm.XmlSerializer.serialize(self.system)
+        integrator_xml = openmm.XmlSerializer.serialize(self.integrator)
 
         return {
             'system_xml': system_xml,
@@ -337,11 +344,11 @@ class OpenMMEngine(DynamicsEngine):
         properties = {str(key): str(value)
                       for key, value in properties.items()}
 
-        integrator = simtk.openmm.XmlSerializer.deserialize(integrator_xml)
+        integrator = openmm.XmlSerializer.deserialize(integrator_xml)
         integrator = restore_custom_integrator_interface(integrator)
         return OpenMMEngine(
             topology=topology,
-            system=simtk.openmm.XmlSerializer.deserialize(system_xml),
+            system=openmm.XmlSerializer.deserialize(system_xml),
             integrator=integrator,
             options=options,
             openmm_properties=properties
@@ -360,13 +367,13 @@ class OpenMMEngine(DynamicsEngine):
 
         # Parameters
         # ----------
-        # item : simtk.unit.Quantity or iterable of simtk.unit.Quantity
+        # item : unit.Quantity or iterable of unit.Quantity
             # the input with units
 
         # Returns
         # -------
         # float or iterable
-            # resulting value in the simtk.units.md_unit_system, but without
+            # resulting value in the unit.md_unit_system, but without
             # units attached
         # """
         # try:

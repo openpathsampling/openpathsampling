@@ -4,29 +4,23 @@
 from __future__ import absolute_import
 
 from builtins import object
-from nose.tools import (assert_equal, assert_not_equal, assert_is, raises,
-                        assert_true, assert_false)
-from nose.plugins.skip import Skip, SkipTest
 from .test_helpers import (CallIdentity, raises_with_message_like,
                            make_1d_traj)
 
-import unittest
 import pytest
 import numpy as np
-try:
-    from simtk import unit
-except ImportError:
-    HAS_SIMTK_UNIT = False
-else:
-    HAS_SIMTK_UNIT = True
+
+from openpathsampling.integration_tools import unit, HAS_SIMTK_UNIT
 
 import openpathsampling.volume as volume
 
 import openpathsampling as paths
 
+
 class Identity2(CallIdentity):
     def __str__(self):
         return "Id2"
+
 
 def setup_module():
     global op_id, volA, volB, volC, volD, volA2
@@ -43,28 +37,28 @@ class TestEmptyVolume(object):
         """Empty volume is well-behaved"""
         empty = volume.EmptyVolume()
         test = 0.1
-        assert_equal(empty(test), False)
-        assert_equal((empty & volA)(test), False)
-        assert_equal((volA & empty)(test), False)
-        assert_equal((empty | volA)(test), True)
-        assert_equal((volA | empty)(test), True)
-        assert_equal((empty & volA).__str__(), "empty")
+        assert empty(test) is False
+        assert (empty & volA)(test) is False
+        assert (volA & empty)(test) is False
+        assert (empty | volA)(test) is True
+        assert (volA | empty)(test) is True
+        assert (empty & volA).__str__() == "empty"
         # assert_is: logical combos with empty should return same obj
-        assert_is((empty - volA), empty)
-        assert_is((volA - empty), volA)
-        assert_is((volA | empty), volA)
-        assert_is((empty | volA), volA)
-        assert_is((volA & empty), empty)
-        assert_is((empty & volA), empty)
-        assert_is((empty ^ volA), volA)
-        assert_is((volA ^ empty), volA)
-        assert_equal((~ empty).__str__(), "all")
+        assert (empty - volA) is empty
+        assert (volA - empty) is volA
+        assert (volA | empty) is volA
+        assert (empty | volA) is volA
+        assert (volA & empty) is empty
+        assert (empty & volA) is empty
+        assert (empty ^ volA) is volA
+        assert (volA ^ empty) is volA
+        assert (~ empty).__str__() == "all"
 
     def test_empty_volume_equality(self):
         empty1 = volume.EmptyVolume()
         empty2 = volume.EmptyVolume()
-        assert_true(empty1 == empty2)
-        assert_false(empty1 != empty2)
+        assert empty1 == empty2
+        assert not (empty1 != empty2)
 
 
 class TestFullVolume(object):
@@ -72,122 +66,122 @@ class TestFullVolume(object):
         """Full volume is well-behaved"""
         full = volume.FullVolume()
         test = 0.1
-        assert_equal(full(test), True)
-        assert_equal((full & volA)(test), True)
-        assert_equal((volA & full)(test), True)
-        assert_equal((full | volA)(test), True)
-        assert_equal((volA | full)(test), True)
+        assert full(test) is True
+        assert (full & volA)(test) is True
+        assert (volA & full)(test) is True
+        assert (full | volA)(test) is True
+        assert (volA | full)(test) is True
         # assert_is: logical combos with full should return same obj
-        assert_is((full & volA), volA)
-        assert_is((volA & full), volA)
-        assert_is((full | volA), full)
-        assert_is((volA | full), full)
-        assert_equal((volA - full), volume.EmptyVolume())
-        assert_equal((full - volA), ~ volA)
-        assert_equal((full ^ volA), ~ volA)
-        assert_equal((volA ^ full), ~ volA)
-        assert_equal((volA | full).__str__(), "all")
-        assert_equal((~ full).__str__(), "empty")
+        assert (full & volA) is volA
+        assert (volA & full) is volA
+        assert (full | volA) is full
+        assert (volA | full) is full
+        assert (volA - full) == volume.EmptyVolume()
+        assert (full - volA) == ~ volA
+        assert (full ^ volA) == ~ volA
+        assert (volA ^ full) == ~ volA
+        assert (volA | full).__str__() == "all"
+        assert (~ full).__str__() == "empty"
+
 
 class TestCVDefinedVolume(object):
     def test_upper_boundary(self):
-        assert_equal(volA(0.49), True)
-        assert_equal(volA(0.50), False)
-        assert_equal(volA(0.51), False)
+        assert volA(0.49) is True
+        assert volA(0.50) is False
+        assert volA(0.51) is False
+
+    def test_inf_upper_boundary(self):
+        volX = volume.CVDefinedVolume(op_id, 0, float('inf'))
+        assert volA(float('inf')) is False
+        assert volX(float('inf')) is True
 
     def test_lower_boundary(self):
-        assert_equal(volA(-0.49), True)
-        assert_equal(volA(-0.50), True)
-        assert_equal(volA(-0.51), False)
+        assert volA(-0.49) is True
+        assert volA(-0.50) is True
+        assert volA(-0.51) is False
+
+    def test_inf_lower_boundary(self):
+        volX = volume.CVDefinedVolume(op_id, float('-inf'), 0)
+        assert volA(float('-inf')) is False
+        assert volX(float('-inf')) is True
 
     def test_negation(self):
-        assert_equal((~volA)(0.25), False)
-        assert_equal((~volA)(0.75), True)
-        assert_equal((~volA)(0.5), True)
-        assert_equal((~volA)(-0.5), False)
+        assert (~volA)(0.25) is False
+        assert (~volA)(0.75) is True
+        assert (~volA)(0.5) is True
+        assert (~volA)(-0.5) is False
 
     def test_autocombinations(self):
         # volA tests this in the CVRangeVolumes
-        assert_equal(volA | volA, volA)
-        assert_equal(volA & volA, volA)
-        assert_equal(volA ^ volA, volume.EmptyVolume())
-        assert_equal(volA - volA, volume.EmptyVolume())
+        assert volA | volA is volA
+        assert volA & volA is volA
+        assert volA ^ volA == volume.EmptyVolume()
+        assert volA - volA == volume.EmptyVolume()
         # combo tests this with VolumeCombination of CVRangeVolumes
         combo = (volD - volA)
-        assert_is(combo | combo, combo)
-        assert_is(combo & combo, combo)
-        assert_equal(combo ^ combo, volume.EmptyVolume())
-        assert_equal(combo - combo, volume.EmptyVolume())
-
+        assert combo | combo is combo
+        assert combo & combo is combo
+        assert combo ^ combo == volume.EmptyVolume()
+        assert combo - combo == volume.EmptyVolume()
 
     def test_and_combinations(self):
-        assert_equal((volA & volB), volume.CVDefinedVolume(op_id, 0.25, 0.5))
-        assert_equal((volA & volB)(0.45), True)
-        assert_equal((volA & volB)(0.55), False)
-        assert_equal((volB & volC), volume.EmptyVolume())
+        assert (volA & volB) == volume.CVDefinedVolume(op_id, 0.25, 0.5)
+        assert (volA & volB)(0.45) is True
+        assert (volA & volB)(0.55) is False
+        assert (volB & volC) == volume.EmptyVolume()
         # go to VolumeCombination if order parameter isn't the same
-        assert_equal((volA & volA2),
-                     volume.VolumeCombination(volA, volA2,
-                                              lambda a, b: a and b,
-                                              '{0} and {1}')
-                    )
+        assert (volA & volA2) == volume.VolumeCombination(volA, volA2,
+                                                          lambda a, b: a and b,
+                                                          '{0} and {1}')
 
     def test_or_combinations(self):
-        assert_equal((volA | volB), volume.CVDefinedVolume(op_id, -0.5, 0.75))
-        assert_equal((volB | volC), volume.UnionVolume(volB, volC))
-        assert_equal((volB | volC)(0.0), False)
-        assert_equal((volB | volC)(0.5), True)
-        assert_equal((volB | volC)(-0.5), True)
+        assert (volA | volB) == volume.CVDefinedVolume(op_id, -0.5, 0.75)
+        assert (volB | volC) == volume.UnionVolume(volB, volC)
+        assert (volB | volC)(0.0) is False
+        assert (volB | volC)(0.5) is True
+        assert (volB | volC)(-0.5) is True
 
         # go to VolumeCombination if order parameters isn't the same
-        assert_equal((volA2 | volB),
-                     volume.UnionVolume(volA2, volB))
+        assert (volA2 | volB) == volume.UnionVolume(volA2, volB)
 
     def test_xor_combinations(self):
-        assert_equal((volA ^ volB),
-                     volume.UnionVolume(
-                         volume.CVDefinedVolume(op_id, -0.5, 0.25),
-                         volume.CVDefinedVolume(op_id, 0.5, 0.75)
-                     ))
-        assert_equal((volA ^ volA2),
-                     volume.SymmetricDifferenceVolume(volA, volA2))
+        assert ((volA ^ volB) ==
+                volume.UnionVolume(volume.CVDefinedVolume(op_id, -0.5, 0.25),
+                                   volume.CVDefinedVolume(op_id, 0.5, 0.75)))
+        assert (volA ^ volA2) == volume.SymmetricDifferenceVolume(volA, volA2)
 
     def test_sub_combinations(self):
-        assert_equal((volA - volB), volume.CVDefinedVolume(op_id, -0.5, 0.25))
-        assert_equal((volB - volC), volB)
-        assert_equal((volA - volD), volume.EmptyVolume())
-        assert_equal((volB - volA), volume.CVDefinedVolume(op_id, 0.5, 0.75))
-        assert_equal((volD - volA),
-                     volume.UnionVolume(
-                         volume.CVDefinedVolume(op_id, -0.75, -0.5),
-                         volume.CVDefinedVolume(op_id, 0.5, 0.75)
-                     )
-                    )
-        assert_equal((volA2 - volA),
-                     volume.RelativeComplementVolume(volA2, volA))
+        assert (volA - volB) == volume.CVDefinedVolume(op_id, -0.5, 0.25)
+        assert (volB - volC) == volB
+        assert (volA - volD) == volume.EmptyVolume()
+        assert (volB - volA) == volume.CVDefinedVolume(op_id, 0.5, 0.75)
+        assert ((volD - volA) ==
+                volume.UnionVolume(volume.CVDefinedVolume(op_id, -0.75, -0.5),
+                                   volume.CVDefinedVolume(op_id, 0.5, 0.75)))
+        assert (volA2 - volA) == volume.RelativeComplementVolume(volA2, volA)
 
     def test_str(self):
-        assert_equal(volA.__str__(), "{x|Id(x) in [-0.5, 0.5]}")
-        assert_equal((~volA).__str__(), "(not {x|Id(x) in [-0.5, 0.5]})")
+        assert volA.__str__() == "{x|Id(x) in [-0.5, 0.5]}"
+        assert (~volA).__str__() == "(not {x|Id(x) in [-0.5, 0.5]})"
 
+    @pytest.mark.skipif(not paths.integration_tools.HAS_SIMTK_UNIT,
+                        reason="Needs openmm.unit")
     def test_unit_support(self):
-        if not paths.integration_tools.HAS_SIMTK_UNIT:
-            raise SkipTest
-        import simtk.unit as u
+        u = unit
 
         vol = volume.CVDefinedVolume(
             op_id, -0.5 * u.nanometers, 0.25 * u.nanometers)
 
-        assert(vol(-0.25 * u.nanometers))
-        assert(not vol(-0.75 * u.nanometers))
+        assert vol(-0.25 * u.nanometers)
+        assert not vol(-0.75 * u.nanometers)
 
         vol = volume.PeriodicCVDefinedVolume(
             op_id,
             -30 * u.nanometers, 90 * u.nanometers,
             -180 * u.nanometers, 180 * u.nanometers)
 
-        assert (vol(50 * u.nanometers))
-        assert (not vol(-70 * u.nanometers))
+        assert vol(50 * u.nanometers)
+        assert not vol(-70 * u.nanometers)
 
     @staticmethod
     def _vol_for_cv_type(inp):
@@ -200,7 +194,7 @@ class TestCVDefinedVolume(object):
             'array1': lambda s: np.array([1.0]),
             'simtk': None
         }[inp]
-        if func is None:  # only if simtk
+        if func is None:  # only if inp is 'simtk'
             func = lambda s: 1.0 * unit.nanometers
 
         cv = paths.FunctionCV('cv', func)
@@ -232,7 +226,7 @@ class TestCVDefinedVolume(object):
 
 
 class TestCVRangeVolumePeriodic(object):
-    def setup(self):
+    def setup_method(self):
         self.pvolA = volume.PeriodicCVDefinedVolume(op_id, -100, 75)
         self.pvolA_ = volume.PeriodicCVDefinedVolume(op_id, 75, -100)
         self.pvolB = volume.PeriodicCVDefinedVolume(op_id, 50, 100)
@@ -244,175 +238,173 @@ class TestCVRangeVolumePeriodic(object):
         """min<max and both within periodic domain"""
         lambda_min = -150
         lambda_max = 70
-        vol = volume.PeriodicCVDefinedVolume(op_id,
-                                          lambda_min, lambda_max, -180,180)
-        assert_equal(vol._period_len, 360)
-        assert_equal(vol._period_shift, -180)
-        assert_equal(vol.__str__(),
-                     "{x|(Id(x) - -180) % 360 + -180 in [-150, 70]}")
+        vol = volume.PeriodicCVDefinedVolume(op_id, lambda_min, lambda_max,
+                                             -180, 180)
+        assert vol._period_len == 360
+        assert vol._period_shift == -180
+        assert (vol.__str__() ==
+                "{x|(Id(x) - -180) % 360 + -180 in [-150, 70]}")
         for periodic_image in [-1, 0, 1]:
             # out of state
-            assert_equal(False, vol(lambda_min-1.0 + 360*periodic_image))
-            assert_equal(False, vol(lambda_max+1.0 + 360*periodic_image))
+            assert vol(lambda_min-1.0 + 360*periodic_image) is False
+            assert vol(lambda_max+1.0 + 360*periodic_image) is False
             # in state
-            assert_equal(True, vol(lambda_min+1.0 + 360*periodic_image))
-            assert_equal(True, vol(lambda_max-1.0 + 360*periodic_image))
+            assert vol(lambda_min+1.0 + 360*periodic_image) is True
+            assert vol(lambda_max-1.0 + 360*periodic_image) is True
             # border
-            assert_equal(True, vol(lambda_min + 360*periodic_image))
-            assert_equal(False, vol(lambda_max + 360*periodic_image))
+            assert vol(lambda_min + 360*periodic_image) is True
+            assert vol(lambda_max + 360*periodic_image) is False
 
     def test_normal_implicit(self):
         """min<max, no periodic domain defined"""
         lambda_min = -150
         lambda_max = 70
         vol = volume.PeriodicCVDefinedVolume(op_id,
-                                          lambda_min, lambda_max)
-        assert_equal(vol.__str__(),
-            "{x|Id(x) [periodic] in [-150, 70]}")
+                                             lambda_min, lambda_max)
+        assert vol.__str__() == "{x|Id(x) [periodic] in [-150, 70]}"
         # out of state
-        assert_equal(False, vol(lambda_min-1.0))
-        assert_equal(False, vol(lambda_max+1.0))
+        assert vol(lambda_min-1.0) is False
+        assert vol(lambda_max+1.0) is False
         # in state
-        assert_equal(True, vol(lambda_min+1.0))
-        assert_equal(True, vol(lambda_max-1.0))
+        assert vol(lambda_min+1.0) is True
+        assert vol(lambda_max-1.0) is True
         # border
-        assert_equal(True, vol(lambda_min))
-        assert_equal(False, vol(lambda_max))
+        assert vol(lambda_min) is True
+        assert vol(lambda_max) is False
 
     def test_wrapped_volume(self):
         """max<min and both within periodic domain"""
         lambda_min = 70
         lambda_max = -150
         vol = volume.PeriodicCVDefinedVolume(op_id,
-                                          lambda_min, lambda_max, -180,180)
-        assert_equal(vol.__str__(),
-            "{x|(Id(x) - -180) % 360 + -180 in [-180, -150] union [70, 180]}")
+                                             lambda_min, lambda_max, -180, 180)
+        assert vol.__str__() == ("{x|(Id(x) - -180) % 360 + -180 "
+                                 "in [-180, -150] union [70, 180]}")
         for periodic_image in [-1, 0, 1]:
             # out of state
-            assert_equal(False, vol(lambda_min-1.0 + 360*periodic_image))
-            assert_equal(False, vol(lambda_max+1.0 + 360*periodic_image))
+            assert vol(lambda_min-1.0 + 360*periodic_image) is False
+            assert vol(lambda_max+1.0 + 360*periodic_image) is False
             # in state
-            assert_equal(True, vol(lambda_min+1.0 + 360*periodic_image))
-            assert_equal(True, vol(lambda_max-1.0 + 360*periodic_image))
+            assert vol(lambda_min+1.0 + 360*periodic_image) is True
+            assert vol(lambda_max-1.0 + 360*periodic_image) is True
             # border
-            assert_equal(True, vol(lambda_min + 360*periodic_image))
-            assert_equal(False, vol(lambda_max + 360*periodic_image))
+            assert vol(lambda_min + 360*periodic_image) is True
+            assert vol(lambda_max + 360*periodic_image) is False
 
     def test_wrapped_volume_implicit(self):
         """max<min, no periodic domain defined"""
         lambda_min = 70
         lambda_max = -150
-        vol = volume.PeriodicCVDefinedVolume(op_id,
-                                          lambda_min, lambda_max)
+        vol = volume.PeriodicCVDefinedVolume(op_id, lambda_min, lambda_max)
         # out of state
-        assert_equal(False, vol(lambda_min-1.0))
-        assert_equal(False, vol(lambda_max+1.0))
+        assert vol(lambda_min-1.0) is False
+        assert vol(lambda_max+1.0) is False
         # in state
-        assert_equal(True, vol(lambda_min+1.0))
-        assert_equal(True, vol(lambda_max-1.0))
+        assert vol(lambda_min+1.0) is True
+        assert vol(lambda_max-1.0) is True
         # border
-        assert_equal(True, vol(lambda_min))
-        assert_equal(False, vol(lambda_max))
+        assert vol(lambda_min) is True
+        assert vol(lambda_max) is False
 
     def test_thru_pbc_to_image(self):
         '''max in next periodic domain'''
         lambda_min = 70
         lambda_max = 210
-        vol = volume.PeriodicCVDefinedVolume(op_id,
-                                          lambda_min, lambda_max, -180,180)
-        assert_equal(vol.lambda_max, -150)
+        vol = volume.PeriodicCVDefinedVolume(op_id, lambda_min, lambda_max,
+                                             -180, 180)
+        assert vol.lambda_max == -150
         # assuming that's true, so is everything else
 
-    @raises(Exception)
     def test_volume_bigger_than_bounds(self):
         '''max-min > pbc_range raises Exception'''
-        vol = volume.PeriodicCVDefinedVolume(op_id, 90, 720, -180, 180)
+        with pytest.raises(Exception, match='Range of volume'):
+            volume.PeriodicCVDefinedVolume(op_id, 90, 720, -180, 180)
 
     def test_volume_equals_bounds(self):
         '''max-min == pbc_range allows all points'''
         vol = volume.PeriodicCVDefinedVolume(op_id, 0, 360, -180, 180)
-        assert_equal(vol.__str__(),
-                     "{x|(Id(x) - -180) % 360 + -180 in [-180, 180]}")
-        assert_equal(True, vol(0))
-        assert_equal(True, vol(360))
-        assert_equal(True, vol(-180))
-        assert_equal(True, vol(180))
+        assert vol.__str__() == ("{x|(Id(x) - -180) % 360 + -180 "
+                                 "in [-180, 180]}")
+        assert vol(0) is True
+        assert vol(360) is True
+        assert vol(-180) is True
+        assert vol(180) is True
 
     def test_periodic_and_combos(self):
-        assert_equal((self.pvolA & self.pvolB),
-                     volume.PeriodicCVDefinedVolume(op_id, 50, 75))
-        assert_equal((self.pvolA & self.pvolB)(60), True)
-        assert_equal((self.pvolA & self.pvolB)(80), False)
-        assert_equal((self.pvolB & self.pvolC), volume.EmptyVolume())
-        assert_equal((self.pvolC & self.pvolB), volume.EmptyVolume())
-        assert_is((self.pvolA & self.pvolA), self.pvolA)
-        assert_equal((self.pvolA & self.pvolA_), volume.EmptyVolume())
-        assert_equal((self.pvolE & self.pvolD), self.pvolD)
+        assert ((self.pvolA & self.pvolB) ==
+                volume.PeriodicCVDefinedVolume(op_id, 50, 75))
+        assert (self.pvolA & self.pvolB)(60) is True
+        assert (self.pvolA & self.pvolB)(80) is False
+        assert (self.pvolB & self.pvolC) == volume.EmptyVolume()
+        assert (self.pvolC & self.pvolB) == volume.EmptyVolume()
+        assert (self.pvolA & self.pvolA) is self.pvolA
+        assert (self.pvolA & self.pvolA_) == volume.EmptyVolume()
+        assert (self.pvolE & self.pvolD) == self.pvolD
         # go to special case for cyclic permutation
-        assert_equal((self.pvolB & self.pvolD), self.pvolB)
+        assert (self.pvolB & self.pvolD) == self.pvolB
         # go to special case
-        assert_equal((self.pvolE & self.pvolA_),
-                     volume.UnionVolume(
-                         volume.PeriodicCVDefinedVolume(op_id, -150,-100),
-                         volume.PeriodicCVDefinedVolume(op_id, 75, 150)
-                     )
+        assert ((self.pvolE & self.pvolA_) ==
+                volume.UnionVolume(
+                    volume.PeriodicCVDefinedVolume(op_id, -150, -100),
+                    volume.PeriodicCVDefinedVolume(op_id, 75, 150)
                     )
+                )
         # go to super if needed
-        assert_equal(type(self.pvolA & volA), volume.IntersectionVolume)
+        assert type(self.pvolA & volA) is volume.IntersectionVolume
 
     def test_periodic_or_combos(self):
-        assert_equal((self.pvolA | self.pvolB), self.pvolD)
-        assert_equal((self.pvolA | self.pvolB)(60), True)
-        assert_equal((self.pvolA | self.pvolB)(80), True)
-        assert_equal((self.pvolA | self.pvolB)(125), False)
-        assert_equal((self.pvolB | self.pvolC),
-                     volume.UnionVolume(self.pvolB, self.pvolC))
-        assert_equal((self.pvolC | self.pvolB), 
-                     volume.UnionVolume(self.pvolC, self.pvolB))
-        assert_is((self.pvolA | self.pvolA), self.pvolA)
-        assert_equal((self.pvolA | self.pvolA_), volume.FullVolume())
-        assert_equal((self.pvolE | self.pvolD), self.pvolE)
-        assert_equal((self.pvolB | self.pvolD), self.pvolD)
-        assert_equal((self.pvolE | self.pvolA_), volume.FullVolume())
+        assert (self.pvolA | self.pvolB) == self.pvolD
+        assert (self.pvolA | self.pvolB)(60) is True
+        assert (self.pvolA | self.pvolB)(80) is True
+        assert (self.pvolA | self.pvolB)(125) is False
+        assert ((self.pvolB | self.pvolC) ==
+                volume.UnionVolume(self.pvolB, self.pvolC))
+        assert ((self.pvolC | self.pvolB) ==
+                volume.UnionVolume(self.pvolC, self.pvolB))
+        assert (self.pvolA | self.pvolA) is self.pvolA
+        assert (self.pvolA | self.pvolA_) == volume.FullVolume()
+        assert (self.pvolE | self.pvolD) == self.pvolE
+        assert (self.pvolB | self.pvolD) == self.pvolD
+        assert (self.pvolE | self.pvolA_) == volume.FullVolume()
 
     def test_periodic_xor_combos(self):
-        assert_equal(self.pvolA ^ self.pvolA_, volume.FullVolume())
-        assert_equal(self.pvolA ^ self.pvolA, volume.EmptyVolume())
-        assert_equal(self.pvolE ^ self.pvolD,
-                     volume.UnionVolume(
-                         volume.PeriodicCVDefinedVolume(op_id, -150, -100),
-                         volume.PeriodicCVDefinedVolume(op_id, 100, 150)))
-        assert_equal(self.pvolB ^ self.pvolC, self.pvolB | self.pvolC)
-        assert_equal(self.pvolB ^ self.pvolD,
-                     volume.PeriodicCVDefinedVolume(op_id, -100, 50))
+        assert self.pvolA ^ self.pvolA_ == volume.FullVolume()
+        assert self.pvolA ^ self.pvolA == volume.EmptyVolume()
+        assert (self.pvolE ^ self.pvolD ==
+                volume.UnionVolume(
+                    volume.PeriodicCVDefinedVolume(op_id, -150, -100),
+                    volume.PeriodicCVDefinedVolume(op_id, 100, 150)))
+        assert self.pvolB ^ self.pvolC == self.pvolB | self.pvolC
+        assert (self.pvolB ^ self.pvolD ==
+                volume.PeriodicCVDefinedVolume(op_id, -100, 50))
 
     def test_periodic_not_combos(self):
-        assert_equal(~self.pvolA, self.pvolA_)
-        assert_equal(self.pvolA, ~self.pvolA_)
-        assert_equal(~(self.pvolB | self.pvolC), 
-                     volume.NegatedVolume(self.pvolB | self.pvolC))
-        assert_equal((~(self.pvolB | self.pvolC))(25), True)
-        assert_equal((~(self.pvolB | self.pvolC))(75), False)
-        assert_equal((~(self.pvolB | self.pvolC))(-75), False)
+        assert ~self.pvolA == self.pvolA_
+        assert self.pvolA == ~self.pvolA_
+        assert (~(self.pvolB | self.pvolC) ==
+                volume.NegatedVolume(self.pvolB | self.pvolC))
+        assert (~(self.pvolB | self.pvolC))(25) is True
+        assert (~(self.pvolB | self.pvolC))(75) is False
+        assert (~(self.pvolB | self.pvolC))(-75) is False
 
     def test_periodic_sub_combos(self):
-        assert_equal(self.pvolA - self.pvolA_, self.pvolA)
-        assert_equal(self.pvolA_ - self.pvolA, self.pvolA_)
-        assert_equal(self.pvolD - self.pvolA,
-                     volume.PeriodicCVDefinedVolume(op_id, 75, 100))
-        assert_equal((self.pvolD - self.pvolA)(80), True)
-        assert_equal((self.pvolD - self.pvolA)(50), False)
-        assert_equal(self.pvolB - self.pvolC, self.pvolB)
-        assert_equal(self.pvolA - self.pvolA, volume.EmptyVolume())
-        assert_equal(self.pvolE - self.pvolD,
-                     volume.UnionVolume(
-                         volume.PeriodicCVDefinedVolume(op_id, -150, -100),
-                         volume.PeriodicCVDefinedVolume(op_id, 100, 150)))
-        assert_equal(self.pvolE - self.pvolA_,
-                     volume.PeriodicCVDefinedVolume(op_id, -100, 75))
+        assert self.pvolA - self.pvolA_ is self.pvolA
+        assert self.pvolA_ - self.pvolA is self.pvolA_
+        assert (self.pvolD - self.pvolA ==
+                volume.PeriodicCVDefinedVolume(op_id, 75, 100))
+        assert (self.pvolD - self.pvolA)(80) is True
+        assert (self.pvolD - self.pvolA)(50) is False
+        assert self.pvolB - self.pvolC is self.pvolB
+        assert self.pvolA - self.pvolA == volume.EmptyVolume()
+        assert (self.pvolE - self.pvolD ==
+                volume.UnionVolume(
+                    volume.PeriodicCVDefinedVolume(op_id, -150, -100),
+                    volume.PeriodicCVDefinedVolume(op_id, 100, 150)))
+        assert (self.pvolE - self.pvolA_ ==
+                volume.PeriodicCVDefinedVolume(op_id, -100, 75))
 
 
 class TestAbstract(object):
     @raises_with_message_like(TypeError, "Can't instantiate abstract class")
     def test_abstract_volume(self):
-        mover = volume.Volume()
+        volume.Volume()

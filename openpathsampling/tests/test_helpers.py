@@ -11,11 +11,7 @@ from openpathsampling.engines import NoEngine
 import numpy as np
 import numpy.testing as npt
 
-try:
-    import simtk.unit as u
-except ImportError:
-    u = None
-
+from openpathsampling.integration_tools import unit as u
 from openpathsampling.integration_tools import is_simtk_quantity_type
 
 try:
@@ -282,7 +278,10 @@ class RandomMDEngine(DynamicsEngine):
 
 def raises_with_message_like(err, message=None):
     """
-    Decorator that allows to run nosetests with raises and testing if the message starts with a txt.
+    Decorator that allows to run tests with raises and testing if the
+    message starts with a txt.
+
+    TODO: this should be deprecated in favor of pytest functionality
 
     Notes
     -----

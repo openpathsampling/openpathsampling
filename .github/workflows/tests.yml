@@ -31,13 +31,12 @@ jobs:
       #   CVs) can differ between minor Python versions.
       matrix:
         CONDA_PY:
-          - 3.9
-          - 3.8
-          - 3.7
-          - 2.7
+          - "3.12"
+          - "3.11"
+          - "3.10"
         MINIMAL: [""]
         include:
-          - CONDA_PY: 3.7
+          - CONDA_PY: "3.10"
             MINIMAL: "minimal"
 
     steps:
@@ -49,6 +48,7 @@ jobs:
         with: 
           auto-update-conda: true
           python-version: ${{ matrix.CONDA_PY }}
+          miniforge-variant: Mambaforge
       - name: "Install requirements"
         env:
           MINIMAL: ${{ matrix.MINIMAL }}
@@ -57,18 +57,24 @@ jobs:
           if [ -z "$MINIMAL" ] ; then
             source devtools/conda_install_reqs.sh
           else
-            python -m pip install -r devtools/minimal.txt \
-                                  -r devtools/minimal_testing.txt
+            # In this case we're actually double-installing (not just
+            # installing requirements here). We prefer this to using the
+            # conda_install_reqs script so we can test deps coming from PyPI
+            python -m pip install -e .[test]
           fi
           python -m pip install autorelease
       - name: "Install"
         run: |
           python -m pip install --no-deps -e .
-          python -c "import openpathsampling"
+      - name: "Check installation"
+        run: |
+          python -c "import openpathsampling; print(openpathsampling.version.full_version)"
       - name: "Versions"
         run: conda list
       - name: "Autorelease check"
         run: python devtools/autorelease_check.py
+      #- name: "DEBUG: enable SSH login"
+        #uses: mxschmitt/action-tmate@v3
       - name: "Unit Tests"
         env:
           PY_COLORS: "1"
@@ -76,13 +82,8 @@ jobs:
       - name: "Tests: Experimental"
         if: matrix.MINIMAL == '' && matrix.CONDA_PY != '2.7'
         run: py.test openpathsampling/experimental/ -vv -s
-      - name: "Report coverage"
-        run: bash <(curl -s https://codecov.io/bash)
+      - uses: codecov/codecov-action@v2
       - name: "Notebook tests"
         if: matrix.MINIMAL == ''
         run: |
           pushd examples/ && ./ipynbtests.sh || exit 1 && popd
-      - name: "Deploy docs"
-        if: matrix.CONDA_PY == '3.7' && matrix.MINIMAL == ''
-        run: |
-          echo "TODO"

@@ -9,8 +9,9 @@ intermediary to monitor when a path needs to be terminated.
 import logging
 logger = logging.getLogger(__name__)
 
-from mdtraj.formats import TRRTrajectoryFile
-import mdtraj as md
+from openpathsampling.integration_tools import md, HAS_MDTRAJ
+if HAS_MDTRAJ:
+    TRRTrajectoryFile = md.formats.TRRTrajectoryFile
 
 from openpathsampling.engines import ExternalEngine
 from openpathsampling.engines import features
@@ -145,6 +146,7 @@ class GromacsEngine(ExternalEngine):
     # use these as CMD.format(e=engine, **engine.options)
     SnapshotClass = ExternalMDSnapshot
     InternalizedSnapshotClass = InternalizedMDSnapshot
+    clear_snapshot_cache = True
     def __init__(self, gro, mdp, top, options, base_dir="", prefix="gmx"):
         self.base_dir = base_dir
         self.gro = os.path.join(base_dir, gro)

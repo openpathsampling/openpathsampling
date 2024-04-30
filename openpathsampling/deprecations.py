@@ -1,7 +1,6 @@
 from __future__ import print_function
 import sys
 import warnings
-from collections import namedtuple
 from functools import wraps
 from inspect import isclass
 
@@ -13,6 +12,7 @@ numpydoc_deprecation = """
 .. deprecated:: {deprecated_in}
     {problem} {remedy}
 """
+
 
 class Deprecation(object):
     """
@@ -105,6 +105,7 @@ def update_docstring(thing_with_docstring, deprecation):
         docs = thing_with_docstring.__doc__
     return docs + deprecation.docstring_message()
 
+
 def version_tuple_to_string(version_tuple):
     """
     Parameters
@@ -160,6 +161,14 @@ MSMBUILDER = Deprecation(
     deprecated_in=(1, 1, 0)
 )
 
+PYEMMA = Deprecation(
+    problem=("PyEMMA is no longer maintained. "
+             "PyEMMAFeaturizerCV is no longer officially supported."),
+    remedy="Create a CoordinateFunctionCV to represent the same function.",
+    remove_version=(2, 0),
+    deprecated_in=(1, 6, 1)
+)
+
 OPENMM_MDTRAJTOPOLOGY = Deprecation(
     problem=("openpathsampling.engines.openmm.topology.MDTrajTopology "
              "has been moved."),
@@ -168,6 +177,63 @@ OPENMM_MDTRAJTOPOLOGY = Deprecation(
     deprecated_in=(1, 5, 0)
 )
 
+SNAPSHOTMODIFIER_PROB_RAT = Deprecation(
+    problem=("This function will raise a NotImplementedError in "
+             "{OPS} {version}."),
+    remedy=("All SnapshotModifier subclasses should override the "
+            "probability_ratio function."),
+    remove_version=(2, 0),
+    deprecated_in=(1, 6, 0)
+)
+
+NEW_SNAPSHOT_SELECTOR = Deprecation(
+    problem=("new_snapshot=None; If snapshot has been copied or modified we "
+             "can't find it in trial_trajectory. This call signature will "
+             "update to "
+             "(old_snapshot, old_trajectory, new_snapshot, new_trajectory) "
+             "in {OPS} {version}. "),
+    remedy=("Call with kwargs and use new_snapshot=old_snapshot if "
+            " old_snapshot is not copied or modified in new_traj"),
+    remove_version=(2, 0),
+    deprecated_in=(1, 6, 0)
+)
+
+NEW_SNAPSHOT_KWARG_SELECTOR = Deprecation(
+    problem=("'new_snapshot' should be a supported keyword in "
+             "selector.probability_ratio(); If snapshot has been copied or "
+             "modified we can't reliably find it in trial_trajectory. This "
+             "keyword must be supported in the expected signature: "
+             "(old_snapshot, old_trajectory, new_snapshot, new_trajectory) "
+             "in {OPS} {version}. "),
+    remedy=("kwarg 'new_snapshot' must to be supported, implement it as "
+            "new_snapshot=old_snapshot if new_traj is not used to calculate "
+            "the weight of old_snapshot"),
+    remove_version=(2, 0),
+    deprecated_in=(1, 6, 0)
+)
+
+NEW_DEFAULT_FILENAME_SETTER =  Deprecation(
+    problem=("The default FilenameSetter for external engines is now a counter"
+             ", but will become a random string. This is more robust against "
+             "accidental overwrites."),
+    remedy=("If you want to keep the old counting behavior, add "
+            '{"filename_setter": '
+            "paths.engines.external_engine.FilenameSetter() } to the 'options'"
+            " of this engine. Otherwise, this behavior will automatically "
+            "change to RandomStringFilenames in OPS 2.0."),
+    remove_version=(2, 0),
+    deprecated_in=(1, 6, 0)
+)
+
+SIMSTORE_CALLABLE_CODEC_STRING_NOT_BYTES = Deprecation(
+    problem=("The storage representation of callables stored by SimStore "
+             "has changed. Some functions stored in this file may not "
+             "work starting in {OPS} {version}"),
+    remedy=("Re-saving the data from this file into another file will "
+            "create something that can be loaded in that version."),
+    remove_version=(2, 0),
+    deprecated_in=(1, 6, 0)
+)
 
 # has_deprecations and deprecate hacks to change docstrings inspired by:
 # https://stackoverflow.com/a/47441572/4205735
@@ -183,6 +249,7 @@ def has_deprecations(cls):
                 pass
             del obj.__new_docstring
     return cls
+
 
 def deprecate(deprecation):
     """Decorator to deprecate a class/method
@@ -210,6 +277,7 @@ def deprecate(deprecation):
         else:
             return wrapper
     return decorator
+
 
 def list_deprecations(version=None, deprecations=None):
     """List deprecations that should have been removed by ``version``

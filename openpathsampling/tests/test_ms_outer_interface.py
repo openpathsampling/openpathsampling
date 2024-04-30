@@ -1,8 +1,5 @@
 from __future__ import absolute_import
 from builtins import object
-from nose.tools import (assert_equal, assert_not_equal, assert_almost_equal,
-                        raises)
-from nose.plugins.skip import Skip, SkipTest
 from .test_helpers import (
     true_func, assert_equal_array_array, make_1d_traj, data_filename,
     assert_items_equal
@@ -18,10 +15,10 @@ logging.getLogger('openpathsampling.storage').setLevel(logging.CRITICAL)
 logging.getLogger('openpathsampling.netcdfplus').setLevel(logging.CRITICAL)
 
 class TestMSOuterTISInterface(object):
-    def setup(self):
+    def setup_method(self):
         paths.InterfaceSet._reset()
         self.cv_inc = paths.FunctionCV(name="inc", f=lambda s: s.xyz[0][0])
-        self.cv_dec = paths.FunctionCV(name="dec", 
+        self.cv_dec = paths.FunctionCV(name="dec",
                                         f=lambda s: 1.0-s.xyz[0][0])
         self.lambdas = [0.0, 0.1, 0.2, 0.3]
         self.interfaces_inc = paths.VolumeInterfaceSet(cv=self.cv_inc,
@@ -62,36 +59,37 @@ class TestMSOuterTISInterface(object):
         by_lambda = self.ms_outer
         explicit = self.ms_outer_explicit
         for iface_set in explicit.interface_sets:
-            assert_equal(by_lambda.volume_for_interface_set(iface_set),
-                         explicit.volume_for_interface_set(iface_set))
-            assert_equal(by_lambda.lambda_for_interface_set(iface_set),
-                         explicit.lambda_for_interface_set(iface_set))
+            assert (by_lambda.volume_for_interface_set(iface_set)
+                    == explicit.volume_for_interface_set(iface_set))
+            assert (by_lambda.lambda_for_interface_set(iface_set)
+                    == explicit.lambda_for_interface_set(iface_set))
 
-        assert_equal(len(explicit.volumes), len(by_lambda.volumes))
-        assert_equal(len(explicit.lambdas), len(by_lambda.lambdas))
+        assert len(explicit.volumes) == len(by_lambda.volumes)
+        assert len(explicit.lambdas) == len(by_lambda.lambdas)
         assert_items_equal(set(explicit.interface_sets),
                            set(by_lambda.interface_sets))
 
 
     def test_volume_for_interface_set(self):
-        assert_equal(
-            self.ms_outer.volume_for_interface_set(self.interfaces_inc),
-            self.volumes[0]
+        assert (
+            self.ms_outer.volume_for_interface_set(self.interfaces_inc)
+            == self.volumes[0]
         )
-        assert_equal(
-            self.ms_outer.volume_for_interface_set(self.interfaces_dec),
-            self.volumes[1]
+        assert (
+            self.ms_outer.volume_for_interface_set(self.interfaces_dec)
+            == self.volumes[1]
         )
 
     def test_lambda_for_interface_set(self):
-        assert_equal(
-            self.ms_outer.lambda_for_interface_set(self.interfaces_inc),
-            0.5
+        assert (
+            self.ms_outer.lambda_for_interface_set(self.interfaces_inc)
+            == 0.5
         )
-        assert_equal(
-            self.ms_outer.lambda_for_interface_set(self.interfaces_dec),
-            0.4
+        assert (
+            self.ms_outer.lambda_for_interface_set(self.interfaces_dec)
+            == 0.4
         )
+
 
     def test_relevant_transitions(self):
         extra_set = paths.VolumeInterfaceSet(self.cv_inc, 0.0, [0.2, 0.3])
@@ -101,8 +99,8 @@ class TestMSOuterTISInterface(object):
         # TODO: switch once network is working
         relevant = self.post_network.relevant_transitions(transitions)
         #relevant = self.ms_outer.relevant_transitions(transitions)
-        assert_equal(len(relevant), 2)
-        assert_equal(set(self.network.sampling_transitions), set(relevant))
+        assert len(relevant) == 2
+        assert set(self.network.sampling_transitions) == set(relevant)
 
     def test_make_ensemble(self):
         transitions = self.network.sampling_transitions
@@ -115,12 +113,12 @@ class TestMSOuterTISInterface(object):
         test_BXB = make_1d_traj([1.1, 0.5, 1.2])
         test_AXB = make_1d_traj([-0.1, 0.6, 1.1])
         test_BXA = make_1d_traj([1.1, 0.5, -0.1])
-        assert_equal(ensemble(test_AA), False)
-        assert_equal(ensemble(test_AXA), True)
-        assert_equal(ensemble(test_BB), False)
-        assert_equal(ensemble(test_BXB), True)
-        assert_equal(ensemble(test_BXA), True)
-        assert_equal(ensemble(test_AXB), True)
+        assert ensemble(test_AA) is False
+        assert ensemble(test_AXA) is True
+        assert ensemble(test_BB) is False
+        assert ensemble(test_BXB) is True
+        assert ensemble(test_BXA) is True
+        assert ensemble(test_AXB) is True
 
     def test_make_ensemble_with_forbidden(self):
         forbidden = paths.CVDefinedVolume(self.cv_inc, 0.55, 0.65)
@@ -138,13 +136,13 @@ class TestMSOuterTISInterface(object):
         test_AFB = make_1d_traj([-0.1, 0.6, 1.1])
         test_BXA = make_1d_traj([1.1, 0.5, -0.1])
         test_BFA = make_1d_traj([1.1, 0.6, -0.1])
-        assert_equal(ensemble(test_AA), False)
-        assert_equal(ensemble(test_AXA), True)
-        assert_equal(ensemble(test_BB), False)
-        assert_equal(ensemble(test_BXB), True)
-        assert_equal(ensemble(test_BXA), True)
-        assert_equal(ensemble(test_AXB), True)
-        assert_equal(ensemble(test_AFA), False)
-        assert_equal(ensemble(test_BFB), False)
-        assert_equal(ensemble(test_AFB), False)
-        assert_equal(ensemble(test_BFA), False)
+        assert ensemble(test_AA) is False
+        assert ensemble(test_AXA) is True
+        assert ensemble(test_BB) is False
+        assert ensemble(test_BXB) is True
+        assert ensemble(test_BXA) is True
+        assert ensemble(test_AXB) is True
+        assert ensemble(test_AFA) is False
+        assert ensemble(test_BFB) is False
+        assert ensemble(test_AFB) is False
+        assert ensemble(test_BFA) is False

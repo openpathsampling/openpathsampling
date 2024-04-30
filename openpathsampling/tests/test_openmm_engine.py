@@ -9,14 +9,13 @@ from builtins import range
 from builtins import object
 from past.utils import old_div
 import numpy as np
-from nose.tools import (assert_equal)
-from nose.plugins.skip import SkipTest
-try:
-    import simtk.openmm as mm
-    from simtk.openmm import app
-except ImportError:
-    mm = None
+
+from openpathsampling.integration_tools import openmm as mm
+
+if mm is None:
     app = None
+else:
+    app = mm.app
 
 import openpathsampling.engines.openmm as peng
 import openpathsampling.engines as dyn
@@ -39,7 +38,7 @@ logging.getLogger('openpathsampling.netcdfplus').setLevel(logging.CRITICAL)
 def setup_module():
     global topology, template, system, nan_causing_template
     if not (u and mm and app and md):
-        raise SkipTest
+        pytest.skip("Missing requirements")
     template = peng.snapshot_from_pdb(data_filename("ala_small_traj.pdb"))
     topology = peng.to_openmm_topology(template)
 
@@ -72,7 +71,7 @@ def setup_module():
 
 
 class TestOpenMMEngine(object):
-    def setup(self):
+    def setup_method(self):
 
         # OpenMM Integrator
         integrator = mm.LangevinIntegrator(
@@ -101,12 +100,12 @@ class TestOpenMMEngine(object):
         context.setPositions(template.coordinates)
         context.setVelocities(u.Quantity(zero_array, old_div(u.nanometers, u.picoseconds)))
 
-    def teardown(self):
+    def teardown_method(self):
         pass
 
     def test_sanity(self):
-        assert_equal(self.engine.n_steps_per_frame, 2)
-        assert_equal(self.engine.n_frames_max, 5)
+        assert self.engine.n_steps_per_frame == 2
+        assert self.engine.n_frames_max == 5
         # TODO: add more sanity checks
         pass  # not quite a SkipTest, but a reminder to add more
 
@@ -125,7 +124,7 @@ class TestOpenMMEngine(object):
         testvel = []
         testpos = []
         for i in range(len(pdb_pos)):
-            testpos.append(list(np.array(pdb_pos[i]) + 
+            testpos.append(list(np.array(pdb_pos[i]) +
                                 np.array([1.0, 1.0, 1.0]))
                           )
             testvel.append([0.1*i, 0.1*i, 0.1*i])
@@ -160,8 +159,8 @@ class TestOpenMMEngine(object):
         new_pos = old_div(new_snap.coordinates, u.nanometers)
         old_vel = old_div(snap0.velocities, (old_div(u.nanometers, u.picoseconds)))
         new_vel = old_div(new_snap.velocities, (old_div(u.nanometers, u.picoseconds)))
-        assert_equal(old_pos.shape, new_pos.shape)
-        assert_equal(old_vel.shape, new_vel.shape)
+        assert old_pos.shape == new_pos.shape
+        assert old_vel.shape == new_vel.shape
         assert_not_equal_array_array(old_pos, new_pos)
         assert_not_equal_array_array(old_vel, new_vel)
 
@@ -170,12 +169,12 @@ class TestOpenMMEngine(object):
             _ = self.engine.generate(self.engine.current_snapshot, [true_func])
         except dyn.EngineMaxLengthError as e:
             traj = e.last_trajectory
-            assert_equal(len(traj), self.engine.n_frames_max)
+            assert len(traj) == self.engine.n_frames_max
         else:
             raise RuntimeError('Did not have correct MaxLengthError')
 
     def test_snapshot_timestep(self):
-        assert_equal(self.engine.snapshot_timestep, 4 * u.femtoseconds)
+        assert self.engine.snapshot_timestep == 4 * u.femtoseconds
 
     @raises_with_message_like(paths.engines.EngineMaxLengthError,
                               "Hit maximal length")
@@ -223,15 +222,15 @@ class TestOpenMMEngine(object):
         change = mover.move(init_samp)
 
         assert (isinstance(change, paths.RejectedNaNSampleMoveChange))
-        assert_equal(change.details.rejection_reason, 'nan')
+        assert change.details.rejection_reason == 'nan'
         # since we shoot, we start with a shorter trajectory
         assert(len(change.samples[0].trajectory) < len(init_traj))
 
         newsamp = init_samp.apply_samples(change)
-        assert_equal(len(newsamp), 1)
+        assert len(newsamp) == 1
 
         # make sure there is no change!
-        assert_equal(init_samp[0].trajectory, init_traj)
+        assert init_samp[0].trajectory == init_traj
 
     def test_max_length_rejected(self):
         stateA = paths.EmptyVolume()  # will run indefinitely
@@ -255,15 +254,14 @@ class TestOpenMMEngine(object):
         change = mover.move(init_samp)
 
         assert(isinstance(change, paths.RejectedMaxLengthSampleMoveChange))
-        assert_equal(change.details.rejection_reason, 'max_length')
-        assert_equal(
-            len(change.samples[0].trajectory), self.engine.n_frames_max)
+        assert change.details.rejection_reason == 'max_length'
+        assert len(change.samples[0].trajectory) == self.engine.n_frames_max
 
         newsamp = init_samp.apply_samples(change)
-        assert_equal(len(newsamp), 1)
+        assert len(newsamp) == 1
 
         # make sure there is no change!
-        assert_equal(init_samp[0].trajectory, init_traj)
+        assert init_samp[0].trajectory == init_traj
 
     @pytest.mark.parametrize('has_constraints', [True, False])
     def test_has_constraints(self, has_constraints):

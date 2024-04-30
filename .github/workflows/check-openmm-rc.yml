@@ -5,23 +5,30 @@
 name: "Check for OpenMM RC"
 on:
   schedule:
-    - cron: "0 9 * * */2"
+    - cron: "0 9 * * *"
+  # use this for debugging
+  #pull_request:
+    #branch: master
 
 jobs:
-  check-rc:
+  check_rc:
+    if: ${{ github.repository == 'openpathsampling/openpathsampling' }}
     runs-on: ubuntu-latest
     name: "Check for OpenMM RC"
     steps:
       - uses: actions/checkout@v2
-      - uses: dwhswenson/conda-rc-check@main
+      - uses: dwhswenson/conda-rc-check@v1
         id: checkrc
         with:
           channel: conda-forge
           package: openmm
           ndays: 3
           labels: openmm_rc
-      - uses: benc-uk/workflow-dispatch@v1
-        with:
-          workflow: Test OpenMM Release Candidate
-          token: ${{ secrets.DISPATCH_TOKEN }}
-        if: ${{ steps.checkrc.outputs.hasrc == 'True' }}
+    outputs:
+      hasrc: ${{ steps.checkrc.outputs.hasrc }}
+
+  test_rc:
+    needs: check_rc
+    uses: ./.github/workflows/test-openmm-rc.yml
+    secrets: inherit
+    if: ${{ needs.check_rc.outputs.hasrc == 'True' }}

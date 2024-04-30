@@ -14,7 +14,7 @@ def test_silent_progress(capsys):
 
 
 class TestTqdmPartial(object):
-    def setup(self):
+    def setup_method(self):
         _ = pytest.importorskip('tqdm')
         self.tqdm_partial = TqdmPartial(desc="foo")
 
@@ -40,7 +40,7 @@ class TestTqdmPartial(object):
 
 
 class TestSimpleProgress(object):
-    def setup(self):
+    def setup_method(self):
         self.progress = SimpleProgress()
 
     def test_progress_getter(self):

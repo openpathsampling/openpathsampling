@@ -21,12 +21,8 @@ if sys.version_info > (3, ):
 logger = logging.getLogger(__name__)
 init_log = logging.getLogger('openpathsampling.initialization')
 
-try:
-    from simtk import unit as u
-except ImportError:
-    HAS_SIMTK_UNIT = False
-else:
-    HAS_SIMTK_UNIT = True
+from openpathsampling.integration_tools import unit as u
+from openpathsampling.integration_tools import HAS_SIMTK_UNIT
 
 
 # ==============================================================================
@@ -111,9 +107,7 @@ class NetCDFPlus(netCDF4.Dataset):
             self.getter = getter
             self.setter = setter
 
-            try:
-                from simtk import unit as u
-            except ImportError:
+            if not HAS_SIMTK_UNIT:
                 self.support_simtk_unit = False
 
         def __setitem__(self, key, value):
@@ -320,7 +314,7 @@ class NetCDFPlus(netCDF4.Dataset):
 
             self.stores.restore()
 
-            # Create a dict of simtk.Unit() instances for all netCDF.Variable()
+            # Create a dict of openmm.Unit() instances for all netCDF.Variable()
             for variable_name in self.variables:
                 variable = self.variables[variable_name]
 
@@ -1003,7 +997,6 @@ class NetCDFPlus(netCDF4.Dataset):
                     unit = self.units[var_name]
 
                     def _get(my_getter):
-                        import simtk.unit as u
                         if my_getter is None:
                             return lambda v: u.Quantity(v, unit)
                         else:
@@ -1158,8 +1151,6 @@ class NetCDFPlus(netCDF4.Dataset):
 
         if self.support_simtk_unit and simtk_unit is not None:
 
-            import simtk.unit as u
-
             if isinstance(simtk_unit, u.Unit):
                 unit_instance = simtk_unit
                 symbol = unit_instance.get_symbol()
@@ -1243,14 +1234,10 @@ class NetCDFPlus(netCDF4.Dataset):
         test_type = value
 
         if NetCDFPlus.support_simtk_unit:
-            import simtk.unit as u
-
             if type(test_type) is u.Quantity:
                 # could be a Quantity([..])
                 simtk_unit = test_type.unit
                 test_type = test_type._value
-        else:
-            u = None
 
         if type(test_type) is np.ndarray:
             dimensions = test_type.shape

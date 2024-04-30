@@ -103,13 +103,11 @@ class ExternalMDSnapshot(BaseSnapshot):
         try:
             self.load_details()
         except:
-            pass
-        else:
-            raise RuntimeError("Can't set details if frame already exists.")
-        finally:
             self._xyz = xyz
             self._velocities = velocities
             self._box_vectors = box_vectors
+        else:
+            raise RuntimeError("Can't set details if frame already exists.")
 
     def clear_cache(self):
         """Remove internal details from snapshot.

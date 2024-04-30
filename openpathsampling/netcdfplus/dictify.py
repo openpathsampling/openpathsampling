@@ -40,6 +40,18 @@ else:
     get_callable_name = lambda c: c.func_name
     import builtins
 
+def make_callable_codec(safemode):
+    # starting in Python 3.11, we use SimStore to serialize callables
+    from openpathsampling.experimental.simstore.callable_codec \
+            import CallableCodec
+    only_req = ObjectJSON.prevent_unsafe_modules
+    codec = CallableCodec(settings={
+        'only_allow_required_modules': only_req,
+        'required_modules': ObjectJSON.safe_modules,
+        'safemode': safemode,
+    })
+    return codec
+
 # in Python 3.6 the opcodes have changed width
 if sys.version_info > (3, 6):
     opcode_arg_width = 1
@@ -52,6 +64,7 @@ if int(ujson.__version__.split(".")[0]) <= 2:
     ujson_kwargs = dict()
 else:
     ujson_kwargs = {"reject_bytes": False}
+
 
 class ObjectJSON(object):
     """
@@ -86,6 +99,8 @@ class ObjectJSON(object):
         'simtk',
         'simtk.unit',
         'simtk.openmm'
+        'openmm',
+        'openmm.unit',
     ]
 
     def __init__(self, unit_system=None):
@@ -139,7 +154,6 @@ class ObjectJSON(object):
                 '_integer': str(obj)}
 
         elif obj.__class__.__module__ != builtin_module:
-            #if obj.__class__ is units.Quantity:
             if is_simtk_quantity(obj):
                 # This is number with a unit so turn it into a list
                 if self.unit_system is not None:
@@ -293,7 +307,7 @@ class ObjectJSON(object):
                 else:
                     return None
 
-            elif '_marshal' in obj or '_module' in obj:
+            elif '_marshal' in obj or '_module' in obj or '_dilled' in obj:
                 if self.safemode:
                     return None
 
@@ -326,7 +340,7 @@ class ObjectJSON(object):
 
     @staticmethod
     def unit_from_dict(unit_dict):
-        # this will *only* work if simtk.unit is installed
+        # this will *only* work if openmm.unit is installed
         this_unit = unit.Unit({})
         for unit_name, unit_multiplication in unit_dict.items():
             this_unit *= getattr(unit, unit_name) ** unit_multiplication
@@ -365,6 +379,11 @@ class ObjectJSON(object):
 
         # if the easy way did not work, try saving it using bytecode
         if ObjectJSON.allow_marshal and callable(c):
+            if sys.version_info > (3, 11):
+                codec = make_callable_codec(safemode=False)
+                return codec.default(c)
+
+            # back to normal for older Python versions
             # use marshal
             global_vars = ObjectJSON._find_var(c, opcode.opmap['LOAD_GLOBAL'])
             import_vars = ObjectJSON._find_var(c, opcode.opmap['IMPORT_NAME'])
@@ -479,6 +498,12 @@ class ObjectJSON(object):
                 if packages[0] in ObjectJSON.safe_modules:
                     imp = importlib.import_module(module)
                     c = getattr(imp, c_dict['_name'])
+
+            elif '_dilled' in c_dict:
+                # safemode has to get handled by original netcdfplus, since
+                # this is a staticmethod
+                codec = make_callable_codec(safemode=False)
+                c = codec.object_hook(c_dict)
 
         return c
 

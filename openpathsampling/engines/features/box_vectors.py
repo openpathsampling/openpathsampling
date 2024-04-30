@@ -3,6 +3,10 @@ numpy = ['box_vectors']
 
 dimensions = ['n_spatial']
 
+schema_entries = [
+    ('box_vectors', 'ndarray.float32({n_spatial},{n_spatial})')
+]
+
 
 def netcdfplus_init(store):
     store.create_variable(

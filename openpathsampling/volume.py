@@ -403,7 +403,7 @@ class CVDefinedVolume(Volume):
 
     def _is_iterable(self, val):
         try:
-            # simtk.Quantity erroneously allows iter, so use len
+            # openmm.Quantity erroneously allows iter, so use len
             # besides, CVs shouldn't return generators
             _ = len(val)
         except TypeError:
@@ -425,11 +425,11 @@ class CVDefinedVolume(Volume):
 
         # we explicitly test for infinity to allow the user to
         # define `lambda_min/max='inf'` also when using units
-        # a simtk unit cannot be compared to a python infinite float
+        # an openmm unit cannot be compared to a python infinite float
         if self.lambda_min != float('-inf') and self.lambda_min > l:
             return False
 
-        if self.lambda_min != float('inf') and self.lambda_max <= l:
+        if self.lambda_max != float('inf') and self.lambda_max <= l:
             return False
 
         return True
@@ -489,8 +489,8 @@ class PeriodicCVDefinedVolume(CVDefinedVolume):
         """Wraps `value` into the periodic domain."""
 
         # this looks strange and mimics the modulo operation `%` while
-        # being fully compatible for simtk numbers and plain python as well
-        # working for ints and floats.
+        # being fully compatible for openmm quantities and plain python as
+        # well working for ints and floats.
         val = value - self._period_shift
 
         # little trick to check for positivity without knowing the the units

@@ -9,9 +9,8 @@ from past.utils import old_div
 from builtins import object
 import os
 
-from nose.tools import (assert_equal, assert_not_equal, assert_almost_equal)
-
-from nose.plugins.skip import SkipTest
+import pytest
+from numpy.testing import assert_almost_equal
 
 import openpathsampling as paths
 import openpathsampling.engines.toy as toy
@@ -28,20 +27,22 @@ import numpy as np
 
 def setup_module():
     # set up globals
-    global gaussian, linear, outer, harmonic
+    global gaussian, linear, outer, harmonic, doublewell
     gaussian = toy.Gaussian(6.0, [2.5, 40.0], [0.8, 0.5])
     outer = toy.OuterWalls([1.12, 2.0], [0.2, -0.25])
     linear = toy.LinearSlope([1.5, 0.75], 0.5)
     harmonic = toy.HarmonicOscillator([1.5, 2.0], [0.5, 3.0], [0.25, 0.75])
+    doublewell = toy.DoubleWell([5.0, 2.0], [2.0, 3.0])
     global init_pos, init_vel, sys_mass
     init_pos = np.array([0.7, 0.65])
     init_vel = np.array([0.6, 0.5])
     sys_mass = np.array([1.5, 1.5])
 
+
 # === TESTS FOR TOY POTENTIAL ENERGY SURFACES =============================
 
 class TestHarmonicOscillator(object):
-    def setup(self):
+    def setup_method(self):
         self.positions = init_pos
         self.velocities = init_vel
         self.mass = sys_mass
@@ -61,8 +62,9 @@ class TestHarmonicOscillator(object):
                                         [0.253125, -2.7]):
             assert_almost_equal(experiment, theory)
 
+
 class TestGaussian(object):
-    def setup(self):
+    def setup_method(self):
         self.positions = init_pos
         self.velocities = init_vel
         self.mass = sys_mass
@@ -77,8 +79,9 @@ class TestGaussian(object):
         # -480*((0.65)-0.5)*exp(-2.5*((0.7)-0.8)^2-40*((0.65)-0.5)^2)
         assert_almost_equal(gaussian.dVdx(self)[1], -28.5502621734)
 
+
 class TestOuterWalls(object):
-    def setup(self):
+    def setup_method(self):
         self.positions = init_pos
         self.velocities = init_vel
         self.mass = sys_mass
@@ -93,8 +96,9 @@ class TestOuterWalls(object):
         # 6*2.0*(0.65-(-0.25))^5 = 7.08588
         assert_almost_equal(outer.dVdx(self)[1], 7.08588)
 
+
 class TestLinearSlope(object):
-    def setup(self):
+    def setup_method(self):
         self.positions = init_pos
         self.velocities = init_vel
         self.mass = sys_mass
@@ -103,10 +107,32 @@ class TestLinearSlope(object):
         assert_almost_equal(linear.V(self), 2.0375)
 
     def test_dVdx(self):
-        assert_equal(linear.dVdx(self), [1.5, 0.75])
+        assert linear.dVdx(self) == [1.5, 0.75]
+
+
+class TestDoubleWell(object):
+    def setup_method(self):
+        self.positions = init_pos
+        self.velocities = init_vel
+        self.mass = sys_mass
+
+    def test_V(self):
+        assert_almost_equal(doublewell.V(self), 208.7475125)
+
+    def test_dVdx(self):
+        for (experiment, theory) in zip(doublewell.dVdx(self),
+                                        [-49.14, -44.603]):
+            assert_almost_equal(experiment, theory)
+
+    def test_serialization_cycle(self):
+        dct = doublewell.to_dict()
+        obj = toy.DoubleWell.from_dict(dct)
+        dct2 = obj.to_dict()
+        assert dct == dct2
+
 
 class TestCombinations(object):
-    def setup(self):
+    def setup_method(self):
         self.positions = init_pos
         self.velocities = init_vel
         self.mass = sys_mass
@@ -115,7 +141,7 @@ class TestCombinations(object):
 
     def test_V(self):
         assert_almost_equal(self.simpletest.V(self), 2*2.37918851445)
-        assert_almost_equal(self.fullertest.V(self), 
+        assert_almost_equal(self.fullertest.V(self),
                             2.37918851445 + 1.080382 - 2.0375)
 
     def test_dVdx(self):
@@ -133,8 +159,8 @@ class TestCombinations(object):
 # === TESTS FOR TOY ENGINE OBJECT =========================================
 
 class Test_convert_fcn(object):
-    def test_convert_to_3Ndim(v):
-        raise SkipTest
+    def test_convert_to_3Ndim(self):
+        pytest.skip()
 
         assert_equal_array_array(toy.convert_to_3Ndim([1.0, 2.0]),
                                  np.array([[1.0, 2.0, 0.0]]))
@@ -144,13 +170,13 @@ class Test_convert_fcn(object):
                                  np.array([[1.0, 2.0, 3.0], [4.0, 0.0, 0.0]]))
 
 class TestToyEngine(object):
-    def setup(self):
+    def setup_method(self):
         pes = linear
         integ = toy.LeapfrogVerletIntegrator(dt=0.002)
-        topology=toy.Topology(
-            n_spatial = 2,
-            masses = sys_mass,
-            pes = pes
+        topology = toy.Topology(
+            n_spatial=2,
+            masses=sys_mass,
+            pes=pes
         )
         options={
             'integ' : integ,
@@ -169,17 +195,17 @@ class TestToyEngine(object):
         sim.n_steps_per_frame = 10
         self.sim = sim
 
-    def teardown(self):
+    def teardown_method(self):
         if os.path.isfile('toy_tmp.nc'):
             os.remove('toy_tmp.nc')
 
     def test_sanity(self):
         assert_items_equal(self.sim._mass, sys_mass)
         assert_items_equal(self.sim._minv, [old_div(1.0,m_i) for m_i in sys_mass])
-        assert_equal(self.sim.n_steps_per_frame, 10)
+        assert self.sim.n_steps_per_frame == 10
 
     def test_snapshot_timestep(self):
-        assert_equal(self.sim.snapshot_timestep, 0.02)
+        assert self.sim.snapshot_timestep == 0.02
 
     def test_snapshot_get(self):
         snapshot = self.sim.current_snapshot
@@ -189,11 +215,11 @@ class TestToyEngine(object):
                            self.sim.positions)
 
     def test_snapshot_set(self):
-        snap = toy.Snapshot(coordinates=np.array([[1,2,3]]),
-                        velocities=np.array([[4,5,6]]))
+        snap = toy.Snapshot(coordinates=np.array([[1, 2, 3]]),
+                            velocities=np.array([[4, 5, 6]]))
         self.sim.current_snapshot = snap
-        assert_items_equal(self.sim.positions, [1,2,3])
-        assert_items_equal(self.sim.velocities, [4,5,6])
+        assert_items_equal(self.sim.positions, [1, 2, 3])
+        assert_items_equal(self.sim.velocities, [4, 5, 6])
 
     def test_generate_next_frame(self):
         # we test correctness by integrating forward, then backward
@@ -212,30 +238,30 @@ class TestToyEngine(object):
             traj = self.sim.generate(self.sim.current_snapshot, [true_func])
         except paths.engines.EngineMaxLengthError as e:
             traj = e.last_trajectory
-            assert_equal(len(traj), self.sim.n_frames_max)
+            assert len(traj) == self.sim.n_frames_max
         else:
             raise RuntimeError('Did not raise MaxLength Error')
 
     def test_generate_n_frames(self):
         self.sim.initialized = True
-        ens = paths.LengthEnsemble(4) # first snap plus n_frames
+        ens = paths.LengthEnsemble(4)  # first snap plus n_frames
         orig = self.sim.current_snapshot.copy()
         traj1 = self.sim.generate(self.sim.current_snapshot, [ens.can_append])
         self.sim.current_snapshot = orig
         traj2 = [orig] + self.sim.generate_n_frames(3)
-        assert_equal(len(traj1), len(traj2))
+        assert len(traj1) == len(traj2)
         for (s1, s2) in zip(traj1, traj2):
             # snapshots are not the same object
-            assert_not_equal(s1, s2) 
+            assert s1 != s2
             # however, they have the same values stored in them
-            assert_equal(len(s1.coordinates), 1)
-            assert_equal(len(s1.coordinates[0]), 2)
+            assert len(s1.coordinates) == 1
+            assert len(s1.coordinates[0]) == 2
             assert_items_equal(s1.coordinates[0], s2.coordinates[0])
             assert_items_equal(s1.velocities[0], s2.velocities[0])
 
     def test_start_with_snapshot(self):
-        snap = toy.Snapshot(coordinates=np.array([1,2]),
-                        velocities=np.array([3,4]))
+        snap = toy.Snapshot(coordinates=np.array([1, 2]),
+                            velocities=np.array([3, 4]))
         self.sim.start(snapshot=snap)
         self.sim.stop([snap])
 
@@ -246,20 +272,20 @@ class TestToyEngine(object):
 # === TESTS FOR TOY INTEGRATORS ===========================================
 
 class TestLeapfrogVerletIntegrator(object):
-    def setup(self):
+    def setup_method(self):
         pes = linear
         integ = toy.LeapfrogVerletIntegrator(dt=0.002)
-        topology=toy.Topology(
-            n_spatial = 2,
-            masses = sys_mass,
-            pes = pes
+        topology = toy.Topology(
+            n_spatial=2,
+            masses=sys_mass,
+            pes=pes
         )
-        options={
-            'integ' : integ,
-            'n_frames_max' : 5}
+        options = {
+            'integ': integ,
+            'n_frames_max': 5
+        }
         sim = toy.Engine(options=options,
-                        topology=topology
-                       )
+                         topology=topology)
 
         template = toy.Snapshot(
             coordinates=init_pos.copy(),
@@ -275,11 +301,11 @@ class TestLeapfrogVerletIntegrator(object):
 
     def test_momentum_update(self):
         self.sim.integ._momentum_update(self.sim, 0.002)
-        # velocities = init_vel - pes.dVdx(init_pos)/m*dt 
+        # velocities = init_vel - pes.dVdx(init_pos)/m*dt
         #            = [0.6, 0.5] - [1.5, 0.75]/[1.5, 1.5] * 0.002
         #            = [0.598, 0.499]
-        assert_equal(self.sim.velocities[0], 0.598)
-        assert_equal(self.sim.velocities[1], 0.499)
+        assert self.sim.velocities[0] == 0.598
+        assert self.sim.velocities[1] == 0.499
 
     def test_position_update(self):
         self.sim.integ._position_update(self.sim, 0.002)
@@ -295,26 +321,25 @@ class TestLeapfrogVerletIntegrator(object):
         self.sim.integ.step(self.sim)
 
 
-
 class TestLangevinBAOABIntegrator(object):
     '''Testing for correctness is hard, since this is a stochastic
     calculation. However, we can at least run tests to make sure nothing
     crashes.'''
-    def setup(self):
+    def setup_method(self):
         pes = linear
         integ = toy.LangevinBAOABIntegrator(dt=0.002, temperature=0.5,
-                                        gamma=1.0)
-        topology=toy.Topology(
-            n_spatial = 2,
-            masses = sys_mass,
-            pes = pes
+                                            gamma=1.0)
+        topology = toy.Topology(
+            n_spatial=2,
+            masses=sys_mass,
+            pes=pes
         )
-        options={
-            'integ' : integ,
-            'n_frames_max' : 5}
+        options = {
+            'integ': integ,
+            'n_frames_max': 5
+        }
         sim = toy.Engine(options=options,
-                        topology=topology
-                       )
+                         topology=topology)
 
         template = toy.Snapshot(
             coordinates=init_pos.copy(),
@@ -331,14 +356,55 @@ class TestLangevinBAOABIntegrator(object):
     def test_OU_update(self):
         # we can't actually test for correct values, but we *can* test that
         # some things *don't* happen
-        assert_equal(self.sim.velocities[0], init_vel[0])
-        assert_equal(self.sim.velocities[1], init_vel[1])
+        assert self.sim.velocities[0] == init_vel[0]
+        assert self.sim.velocities[1] == init_vel[1]
         self.sim.integ._OU_update(self.sim, 0.002)
-        assert_not_equal(self.sim.velocities[0], init_vel[0])
-        assert_not_equal(self.sim.velocities[1], init_vel[1])
+        assert self.sim.velocities[0] != init_vel[0]
+        assert self.sim.velocities[1] != init_vel[1]
         # tests that the same random number wasn't used for both:
-        assert_not_equal(self.sim.velocities[0] - init_vel[0],
-                         self.sim.velocities[1] - init_vel[1])
+        assert (self.sim.velocities[0] - init_vel[0]
+                != self.sim.velocities[1] - init_vel[1])
 
     def test_step(self):
         self.sim.generate_next_frame()
+
+
+class TestOverdampedLangevinIntegrator(object):
+    '''This is only a test if the integrator runs. Because of its stochastic
+    nature we can not actually test its correctness easily.'''
+    def setup_method(self):
+        pes = linear
+        integ = toy.OverdampedLangevinIntegrator(dt=0.001, temperature=4.0,
+                                                 D=1.0)
+        topology = toy.Topology(
+            n_spatial=2,
+            masses=sys_mass,
+            pes=pes
+        )
+        options = {
+            'integ': integ,
+            'n_frames_max': 5
+        }
+        sim = toy.Engine(options=options, topology=topology)
+
+        template = toy.Snapshot(
+            coordinates=init_pos.copy(),
+            velocities=init_vel.copy(),
+            engine=sim
+        )
+
+        sim.positions = init_pos.copy()
+        sim.velocities = init_vel.copy()
+
+        sim.n_steps_per_frame = 10
+        self.sim = sim
+
+    def test_step(self):
+        self.sim.generate_next_frame()
+
+    def test_serialization_cycle(self):
+        integ = self.sim.options['integ']
+        dct = integ.to_dict()
+        obj = toy.OverdampedLangevinIntegrator.from_dict(dct)
+        dct2 = obj.to_dict()
+        assert dct == dct2

@@ -1,10 +1,13 @@
-name: Autorelease
+# Vendored from Autorelease 0.5.0
+# Update by updating Autorelease and running `autorelease vendor actions`
+name: "Autorelease Deploy"
 on:
   release:
     types: [published]
 
 jobs:
   deploy_pypi:
+    if: ${{ github.repository == 'openpathsampling/openpathsampling' }}
     runs-on: ubuntu-latest
     name: "Deploy to PyPI"
     steps:

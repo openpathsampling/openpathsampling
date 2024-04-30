@@ -2,7 +2,7 @@ from .sql_backend import *
 import pytest
 
 class TestSQLStorageBackend(object):
-    def setup(self):
+    def setup_method(self):
         self._delete_tmp_files()
         self.database = self._default_database
         self.database.debug = True
@@ -49,7 +49,7 @@ class TestSQLStorageBackend(object):
         return snap_dicts
 
 
-    def teardown(self):
+    def teardown_method(self):
         self._delete_tmp_files()
 
     @property

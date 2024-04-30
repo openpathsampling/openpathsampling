@@ -1,6 +1,4 @@
 jupyter
-openmm!=7.5.1
+openmm>=7.6
 openmmtools
 py-plumed
-pyemma
-

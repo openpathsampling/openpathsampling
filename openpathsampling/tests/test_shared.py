@@ -10,7 +10,7 @@ except ImportError:
 
 
 class TestStaticContainerStore(object):
-    def teardown(self):
+    def teardown_method(self):
         if os.path.isfile("test.nc"):
             os.remove("test.nc")
 

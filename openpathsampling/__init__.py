@@ -41,6 +41,7 @@ from .analysis.shooting_point_analysis import (
     ShootingPointAnalysis, SnapshotByCoordinateDict
 )
 
+from .analysis.sshooting_analysis import SShootingAnalysis
 from .analysis.reactive_flux_analysis import (
     ReactiveFluxAnalysis
 )
@@ -114,7 +115,7 @@ from .pathmover import (
 from .pathsimulators import (
     PathSimulator, FullBootstrapping, Bootstrapping, PathSampling, MCStep,
     CommittorSimulation, ReactiveFluxSimulation, DirectSimulation,
-    ShootFromSnapshotsSimulation
+    ShootFromSnapshotsSimulation, SShootingSimulation
 )
 
 from .rng import default_rng
@@ -166,7 +167,6 @@ from .high_level.ms_outer_interface import MSOuterTISInterface
 from .high_level.part_in_b_tps import (
     PartInBFixedLengthTPSNetwork, PartInBFixedLengthTPSTransition
 )
-
 from .ensembles import *
 from .pathmovers import *
 from .collectivevariables import *
