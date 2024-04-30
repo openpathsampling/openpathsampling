@@ -17,8 +17,7 @@ from .ops_logging import initialization_logging
 from .treelogic import TreeMixin
 
 from openpathsampling.deprecations import deprecate, has_deprecations
-from openpathsampling.deprecations import (SAMPLE_DETAILS, MOVE_DETAILS,
-                                           NEW_SNAPSHOT_KWARG_SELECTOR)
+from openpathsampling.deprecations import NEW_SNAPSHOT_KWARG_SELECTOR
 
 from future.utils import with_metaclass
 
