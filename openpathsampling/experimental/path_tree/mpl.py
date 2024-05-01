@@ -82,7 +82,7 @@ class ThinLines(MPLPlottingStyle):
 
 from matplotlib.patches import Rectangle
 
-def blocks_connector_fix(x, direction):
+def _blocks_connector_fix(x, direction):
     """Move shooting point connector to the edge of the box"""
     return x + 0.5 * direction
 
@@ -92,14 +92,24 @@ class Blocks(MPLPlottingStyle):
     The Blocks plotting style uses rectangular patches for each snapshot.
     """
     FIXES = {
-        'ForwardShootMover': partial(blocks_connector_fix, direction=+1),
-        'BackwardShootMover': partial(blocks_connector_fix, direction=-1),
+        'ForwardShootMover': partial(_blocks_connector_fix, direction=+1),
+        'BackwardShootMover': partial(_blocks_connector_fix, direction=-1),
     }
     def __init__(self, ax, block_size=(0.8, 0.6)):
         super().__init__(ax)
         self.block_size = block_size
 
     def draw_trajectory(self, row, step, options):
+        """
+        Parameters
+        ----------
+        row : int
+            the row number (counting from the top) for this step
+        step : PathTreeStep
+            the PathTreeStep objects for this step
+        options : PathTreeOptions
+            options for this visualization
+        """
         mover, color, plot_segments = self.step_basics(step, options)
         # first we draw the background line
         for left, right in plot_segments:
