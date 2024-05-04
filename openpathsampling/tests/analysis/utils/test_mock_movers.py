@@ -217,6 +217,48 @@ def test_reject_nonsense_forced_acceptance(default_unidirectional_tis):
 
 
 @pytest.mark.parametrize('accepted', [True, False])
+@pytest.mark.parametrize('direction', ['forward-first', 'backward-first'])
+def test_two_way_shooting_move(two_state_tps_two_way_shooting, accepted,
+                               direction):
+    scheme = two_state_tps_two_way_shooting.scheme
+    ensemble = two_state_tps_two_way_shooting.network.sampling_ensembles[0]
+    make_trajectory = two_state_tps_two_way_shooting.make_trajectory
+    init_traj = two_state_tps_two_way_shooting.make_trajectory(-1, 10)
+    init_conds = scheme.initial_conditions_from_trajectories(init_traj)
+    old_shoot_idx = 5
+    new_shoot_idx = 4
+
+    left_partial = make_trajectory(-1, new_shoot_idx - 1)
+    right_partial = make_trajectory(old_shoot_idx, 10)
+    old_shooting_point = init_traj[old_shoot_idx]
+    modified = init_traj[5].reversed
+
+    new_traj = paths.Trajectory(left_partial + [modified] + right_partial)
+
+    move = MockTwoWayShooting(shooting_index=old_shoot_idx,
+                              new_traj=new_traj,
+                              modified_snapshot=modified,
+                              direction=direction,
+                              scheme=scheme,
+                              ensemble=ensemble,
+                              accepted=accepted)
+
+    # import pdb; pdb.set_trace()
+    change = move(init_conds)
+    assert change.trials[0].trajectory == new_traj
+    assert isinstance(change.mover, paths.TwoWayShootingMover)
+    assert change.mover is scheme.movers['shooting'][0]
+    expected_movetype = {
+        'forward-first': paths.ForwardFirstTwoWayShootingMover,
+        'backward-first': paths.BackwardFirstTwoWayShootingMover,
+    }[direction]
+    assert isinstance(change.subchanges[0].mover, expected_movetype)
+    assert change.accepted is accepted
+
+
+
+
+@pytest.mark.parametrize('accepted', [True, False])
 def test_repex_move(default_unidirectional_tis, accepted):
     scheme = default_unidirectional_tis.scheme
     t1 = default_unidirectional_tis.make_tis_trajectory(4)
