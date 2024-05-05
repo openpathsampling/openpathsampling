@@ -84,6 +84,16 @@ def assert_choice_of(result, choices):
                          (result, choices))
 
 
+class CheckCheckpointingMover(PathMover):
+    """A fake pathmover to run asserts that the checkpointing is correct"""
+    def __init__(self, parent):
+        self.parent = parent
+
+    def move(self, sample_set, checkpoint=None):
+        ...
+
+
+
 class TestPathMover(object):
     def setup_method(self):
         self.l1 = LengthEnsemble(1)

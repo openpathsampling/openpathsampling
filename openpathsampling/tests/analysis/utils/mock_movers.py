@@ -226,7 +226,8 @@ class _MockOneWayShooting(_MockSingleEnsembleMove):
         self.direction = direction
         self.accepted = accepted
 
-    def _generate_mock(self, snapshot, running):
+    def _generate_mock(self, snapshot, running, checkpoint=None):
+        # we'll ignore checkpointing in these mock movers
         return paths.Trajectory([snapshot] + self.partial_traj)
 
     def patches(self, mover):
