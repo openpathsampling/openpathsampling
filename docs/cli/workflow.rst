@@ -18,10 +18,8 @@ usage of these stages.
 Simulation Setup
 ----------------
 
-The CLI has two primary tools for setting up simulations: the ``wizard``
-command and the ``compile`` command. The ``wizard`` command provides a
-friendly interactive guide to setting up path sampling simulations. This is
-particularly useful for beginners.
+The primary CLI tool for setting up simulations is currently ``compile``
+command.
 
 The ``compile`` command takes an input file in YAML or JSON format, and
 creates an OPS object database based on that input. In many ways, this is
@@ -33,18 +31,25 @@ multiple simulations. This makes it easy to ensure that the parameters used
 in one simulation are identical to the parameters used in another
 simulation.
 
-Both the ``wizard`` and ``compile`` functions only create new-style
+Both the ``compile`` command only creates new-style
 "SimStore" (``.db``) database files, not the older NetCDFPlus (``.nc``)
 files. NetCDFPlus support will be dropped in OPS 2.0.
 
-For more on the ``wizard`` and ``compile`` commands, see the detailed
-documentation on each:
+For more on the ``compile`` command, see its detailed documentation:
 
-* :ref:`The Wizard <wizard_command>`
 * :ref:`The Compile Command <compile_command>`
 
 Running Simulations
 -------------------
+
+Many of the commands used for running simulations are related to setting
+preparing for path sampling. For example, the ``visit-all`` command can be
+used with a higher-temperature engine to create trajectories that visit all
+stable states. Then the ``equilibrate`` command could be used to prepare
+those trajectories for actual path sampling.
+
+The ``md`` command can also be useful in preparing for path sampling by
+using it to gauge the stability of proposed stable states.
 
 Analysis
 --------

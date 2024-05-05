@@ -31,7 +31,6 @@ any given subcommand, use ``openpathsampling SUBCOMMAND --help``, replacing
     workflow
     command_usage
     commands
-    wizard/index
     compile/index
     expression_eval
     

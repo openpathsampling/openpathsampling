@@ -3,9 +3,7 @@
 Expression Evaluation
 =====================
 
-Some parts of OpenPathSampling, particularly the ``compile`` and ``wizard``
-commands of the command line interface, have support for evaluation of
-custom expressions.
+The ``compile`` command has support for evaluation of custom expressions.
 
 In general, these tools are a very limited subset of Python, but they do
 make some this a little easier. For example, if you want the edge of a state

@@ -16,7 +16,7 @@ use is personal preference -- the ``compile`` command reads both equally.
 Terminology
 -----------
 
-There are a few terms that we will use 
+There are a few terms that we will use to describe parts of the input file:
 
 * **keyword**: Like most input file formats, an import part of OPS compile
   files is mapping keywords that identify a property to a user-defined
@@ -26,10 +26,10 @@ There are a few terms that we will use
   The top-level keywords in OPS are: ``engines``, ``cvs``, ``volumes``,
   ``states``, ``networks``, and ``schemes``.
 
-Input files for OPS are structures as nested key-value pairs. Each object
-that you will store in the database has certain keywords that are needed
-define it, and the values you assign to those keywords depend on your
-system.
+Input files for OPS are structured as nested key-value pairs or lists. Each
+object that you will store in the database has certain keywords that are
+needed define it, and the values you assign to those keywords depend the
+simulation you intend to run.
 
 
 Example: Basics and evaluated expressions
@@ -103,7 +103,7 @@ CVs based on MDTraj require a topology, which can be provided either by a
 file or by an engine. Engines are always parsed before CVs, so we can use
 the engine that we defined above to provide the topology for our CV. Let's
 create a couple of MDTraj-based CVs; see our :ref:`documentation on
-compiling MDTraj CVs <cvs--mdtraj>` for more details on the keywords. Note
+compiling MDTraj CVs <cv--mdtraj>` for more details on the keywords. Note
 that this assumes it is in the same file as the engine definition above.
 
 .. code:: yaml
