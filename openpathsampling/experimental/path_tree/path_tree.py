@@ -253,6 +253,13 @@ class PathTreePlotter(object):
         self.options = create_default_options()
         self.plot_style = None
 
+    def draw_by_trajectory(self, row, left, right, color, mover):
+        raise NotImplementedError()
+
+    def draw_by_snapshot(self, row, left, right, color, mover, gap=0.0):
+        raise NotImplementedError
+
+
     def draw_trajectories(self, steps, block_offset=0):
         mccycle_mapping = {}
         for row, step in enumerate(self.options.filter_tree_steps(steps)):
