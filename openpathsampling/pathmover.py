@@ -15,7 +15,7 @@ from openpathsampling.pathmover_inout import InOutSet, InOut
 from openpathsampling.rng import default_rng
 from .ops_logging import initialization_logging
 from .treelogic import TreeMixin
-from openpathsampling.checkpointer import EmptyCheckpointer
+from openpathsampling.checkpointing import EmptyCheckpointer
 
 from openpathsampling.deprecations import deprecate, has_deprecations
 from openpathsampling.deprecations import (SAMPLE_DETAILS, MOVE_DETAILS,
