@@ -84,14 +84,39 @@ def assert_choice_of(result, choices):
                          (result, choices))
 
 
-class CheckCheckpointingMover(PathMover):
-    """A fake pathmover to run asserts that the checkpointing is correct"""
-    def __init__(self, parent):
-        self.parent = parent
+class CheckpointBreak(Exception):
+    pass
 
-    def move(self, sample_set, checkpoint=None):
+
+class CaptureCheckpointMover(PathMover):
+    """Path mover that captures the checkpoint state, allowing us to re-run.
+
+    This requires that the checkpointer use a MemoryStorageHandler.
+    """
+    def __init__(self, mover):
+        self.before = None
+        self.after = None
+        self.mover = mover
+
+    def move(self, sample_set, checkpoint):
+        self.before = copy.copy(checkpoint.storage_handler._data)
+        self.mover(sample_set, checkpoint)
+        self.after = copy.copy(checkpoint.storage_handler._data)
+
+
+class CheckpointStage:
+    def __init__(self, checkpointer):
         ...
 
+
+class CheckpointingTestMixin:
+    def test_checkpointing(self):
+        mover = self.checkpointing_mover
+        sample_set = self.checkpointing_sample_set
+
+        # test that the checkpoint is made correctly
+
+        # test that we can restart from the checkpoint
 
 
 class TestPathMover(object):

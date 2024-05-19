@@ -102,6 +102,10 @@ class Checkpointer:
             self.delete_checkpoint()
 
     def _get_storage_class(self):
+        """Temporary hack to get the storage class
+
+        Remove in OPS 2.0
+        """
         from openpathsampling.experimental.storage import (
             Storage, monkey_patch_all
         )
