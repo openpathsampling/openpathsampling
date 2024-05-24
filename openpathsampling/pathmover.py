@@ -895,7 +895,7 @@ class EngineMover(SampleMover):
         run_f = paths.PrefixTrajectoryEnsemble(self.target_ensemble,
                                                trajectory[0:shooting_index]
                                                ).can_append
-        with checkpoint.next_object(self.engine) as cpt:
+        with checkpoint.next_context(self.engine) as cpt:
             partial_trajectory = self.engine.generate(initial_snapshot,
                                                       running=[run_f],
                                                       checkpoint=cpt)
@@ -911,7 +911,7 @@ class EngineMover(SampleMover):
         run_f = paths.SuffixTrajectoryEnsemble(self.target_ensemble,
                                                trajectory[shooting_index + 1:]
                                                ).can_prepend
-        with checkpoint.next_object(self.engine) as cpt:
+        with checkpoint.next_context(self.engine) as cpt:
             partial_trajectory = self.engine.generate(initial_snapshot,
                                                       running=[run_f],
                                                       checkpoint=cpt)
@@ -1633,7 +1633,7 @@ class SelectionMover(PathMover):
             mover, details = self.select_mover(weights)
             checkpoint.save_checkpoint({'mover': mover, 'details': details})
 
-        with checkpoint.next_object(mover) as cpt:
+        with checkpoint.next_context(mover) as cpt:
             subchange = mover.move(sample_set, checkpoint=cpt)
 
         path = paths.RandomChoiceMoveChange(
