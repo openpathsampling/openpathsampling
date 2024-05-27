@@ -148,6 +148,9 @@ class CheckpointTest:
         change = self.run_complete(input_sample_set,
                                                 checkpointer)
         assert change is not None
+        from openpathsampling.experimental.storage import monkey_patches
+        global paths
+        paths = monkey_patches.unpatch(paths, with_old_cvs=False)
         return data, files, change
 
 

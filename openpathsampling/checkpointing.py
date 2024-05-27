@@ -109,7 +109,8 @@ class Checkpointer:
         from openpathsampling.experimental.storage import (
             Storage, monkey_patch_all
         )
-        monkey_patch_all(paths)
+        # we only support new-style CVs in checkpointing
+        monkey_patch_all(paths, with_old_cvs=False)
         return Storage
 
     def _setup_tempdir(self):
@@ -120,7 +121,7 @@ class Checkpointer:
                                "is already in use.")
         self._tempdir_manager = tempfile.TemporaryDirectory()
         tempdir = pathlib.Path(self._tempdir_manager.__enter__())
-        return pathlib.Path(tempdir.__enter__())
+        return pathlib.Path(tempdir)
 
     def _teardown_tempdir(self, exc, value, tb):
         self._tempdir_manager.__exit__(exc, value, tb)

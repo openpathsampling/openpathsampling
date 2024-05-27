@@ -1,6 +1,8 @@
 from openpathsampling.utils.storage_handlers import MemoryStorageHandler
 from openpathsampling.checkpointing import *
 
+import openpathsampling as paths
+
 import pytest
 
 import pathlib
@@ -11,6 +13,11 @@ import shutil
 class TestEmptyCheckpointer:
     def setup_method(self):
         self.checkpoint = EmptyCheckpointer()
+
+    def teardown_method(self):
+        from openpathsampling.experimental.storage import monkey_patches
+        global paths
+        paths = monkey_patches.unpatch(paths, with_old_cvs=False)
 
     def test_context_manager(self):
         with self.checkpoint as cpt:
@@ -47,6 +54,11 @@ class TestCheckpointer:
     def setup_method(self):
         storage_handler = MemoryStorageHandler()
         self.checkpoint = Checkpointer(storage_handler)
+
+    def teardown_method(self):
+        from openpathsampling.experimental.storage import monkey_patches
+        global paths
+        paths = monkey_patches.unpatch(paths, with_old_cvs=False)
 
     def test_setup_teardown(self):
         try:
@@ -197,6 +209,11 @@ class CheckpointLifecycleHarness:
     def setup_method(self):
         self.store = self._setup_storage()
         self.checkpoint = Checkpointer(self.store, context="0")
+
+    def teardown_method(self):
+        from openpathsampling.experimental.storage import monkey_patches
+        global paths
+        paths = monkey_patches.unpatch(paths, with_old_cvs=False)
 
     @staticmethod
     def _setup_storage():
