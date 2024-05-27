@@ -12,6 +12,7 @@ import logging
 from numpy.testing import assert_allclose
 import numpy as np
 import pytest
+from contextlib import contextmanager
 
 import openpathsampling as paths
 from openpathsampling.collectivevariable import FunctionCV
@@ -23,6 +24,8 @@ from openpathsampling.sample import Sample, SampleSet
 from openpathsampling.shooting import UniformSelector
 from openpathsampling.volume import CVDefinedVolume
 import openpathsampling.engines.toy as toys
+from openpathsampling.checkpointing import Checkpointer
+from openpathsampling.utils.storage_handlers import MemoryStorageHandler
 from .test_helpers import (assert_equal_array_array, items_equal,
                            make_1d_traj, CalvinistDynamics, CallIdentity,
                            assert_same_items, A2BEnsemble)
@@ -88,35 +91,64 @@ class CheckpointBreak(Exception):
     pass
 
 
-class CaptureCheckpointMover(PathMover):
-    """Path mover that captures the checkpoint state, allowing us to re-run.
-
-    This requires that the checkpointer use a MemoryStorageHandler.
+class CheckpointTest:
+    """Helper to test that the checkpointing system is working correctly.
     """
-    def __init__(self, mover):
-        self.before = None
-        self.after = None
+    def __init__(self, patch_obj, patch_name, mover=None):
+        self.patch_obj = patch_obj
+        self.patch_name = patch_name
+        if mover is None:
+            mover = patch_obj
+
         self.mover = mover
 
-    def move(self, sample_set, checkpoint):
-        self.before = copy.copy(checkpoint.storage_handler._data)
-        self.mover(sample_set, checkpoint)
-        self.after = copy.copy(checkpoint.storage_handler._data)
+    @contextmanager
+    def raise_error_after_method(self):
+        original_method = getattr(self.patch_obj, self.patch_name)
+        def patched(*args, **kwargs):
+            original_method(*args, **kwargs)
+            raise CheckpointBreak()
 
+        try:
+            setattr(self.patch_obj, self.patch_name, patched)
+            yield
+        finally:
+            setattr(self.patch_obj, self.patch_name, original_method)
 
-class CheckpointStage:
-    def __init__(self, checkpointer):
-        ...
+    def run_incomplete(self, sample_set, checkpoint):
+        try:
+            with self.raise_error_after_method():
+                # should fail to return
+                return self.mover.move(sample_set, checkpoint)
+        except CheckpointBreak:
+            pass  # this is the expected behavior
+        else:
+            raise AssertionError("Expected to raise a CheckpointBreak")
 
+    def run_complete(self, sample_set, checkpoint):
+        return self.mover.move(sample_set, checkpoint)
 
-class CheckpointingTestMixin:
-    def test_checkpointing(self):
-        mover = self.checkpointing_mover
-        sample_set = self.checkpointing_sample_set
+    def checkpointed_move_test(self, input_sample_set):
+        # this is a full test of a move that is checkpointed, where the
+        # first run fails and then it picks up from the checkpointed data
+        checkpointer = Checkpointer(MemoryStorageHandler())
+        # test with checkpoint break (test that when the move fails, the
+        # checkpoint includes relevant information)
+        change = self.run_incomplete(input_sample_set, checkpointer)
+        assert change is None
 
-        # test that the checkpoint is made correctly
+        # load the checkpoint for the forward shooting move
+        data, files = checkpointer.load_checkpoint()
+        # teardown the tempdir so we can continue from the same checkpointer
+        # in this same process (need to remove the tempdir attribute)
+        checkpointer._teardown_tempdir(None, None, None)
 
-        # test that we can restart from the checkpoint
+        # test with checkpoint as starting point (test that we can restart
+        # from the checkpoint and get the same results)
+        change = self.run_complete(input_sample_set,
+                                                checkpointer)
+        assert change is not None
+        return data, files, change
 
 
 class TestPathMover(object):
@@ -247,6 +279,33 @@ class TestForwardShootMover(TestShootingMover):
         )
         assert mover.is_ensemble_change_mover is False
 
+    def test_checkpointing(self):
+        # set up mover
+        mover = ForwardShootMover(
+            ensemble=self.tps,
+            selector=UniformSelector(),
+            engine=self.dyn
+        )
+        self.dyn.initialized = True
+
+        # set up checkpoint test
+        cpt_tester = CheckpointTest(
+            patch_obj=mover,
+            patch_name="move_core",
+        )
+        data, files, change = cpt_tester.checkpointed_move_test(
+            self.init_samp
+        )
+
+        # check results of checkpoint test
+        init_traj = change.canonical.details.initial_trajectory
+        shooting_snap = change.canonical.details.shooting_snapshot
+
+        assert set(data) == {'shooting_index'}
+        assert not files
+        # ensure the actual shooting index matches the checkpoint
+        assert init_traj.index(shooting_snap) == data['shooting_index']
+
 
 class TestBackwardShootMover(TestShootingMover):
     def test_move(self):
@@ -289,6 +348,33 @@ class TestBackwardShootMover(TestShootingMover):
         )
         assert mover.is_ensemble_change_mover is False
 
+    def test_checkpointing(self):
+        # set up mover
+        mover = BackwardShootMover(
+            ensemble=self.tps,
+            selector=UniformSelector(),
+            engine=self.dyn
+        )
+        self.dyn.initialized = True
+
+        # set up checkpoint test
+        cpt_tester = CheckpointTest(
+            patch_obj=mover,
+            patch_name="move_core",
+        )
+        data, files, change = cpt_tester.checkpointed_move_test(
+            self.init_samp
+        )
+
+        # check results of checkpoint test
+        init_traj = change.canonical.details.initial_trajectory
+        shooting_snap = change.canonical.details.shooting_snapshot
+
+        assert set(data) == {'shooting_index'}
+        assert not files
+        # ensure the actual shooting index matches the checkpoint
+        assert init_traj.index(shooting_snap) == data['shooting_index']
+
 
 class TestOneWayShootingMover(TestShootingMover):
     def test_mover_initialization(self):
@@ -310,6 +396,41 @@ class TestOneWayShootingMover(TestShootingMover):
         assert mover.selector == mover.movers[1].selector
         assert mover.ensemble == mover.movers[0].ensemble
         assert mover.ensemble == mover.movers[1].ensemble
+
+    def test_checkpointing(self):
+        # need to use SimStore-style CVs here, so we redefine the tps
+        # ensemble
+        from openpathsampling.experimental.storage import collective_variables
+        cv = collective_variables.CoordinateFunctionCV(
+            lambda s: s.coordinates[0][0]
+        ).named("myid")
+        state_A = CVDefinedVolume(cv, -100, 0.0)
+        state_B = CVDefinedVolume(cv, 0.65, 100)
+        tps = A2BEnsemble(state_A, state_B)
+        init_samp = SampleSet([Sample(
+            replica=self.init_samp[0].replica,
+            trajectory=self.init_samp[0].trajectory,
+            ensemble=tps
+        )])
+        mover = OneWayShootingMover(
+            ensemble=tps,
+            selector=UniformSelector(),
+            engine=self.dyn
+        )
+        self.dyn.initialized = True
+
+        cpt_tester = CheckpointTest(
+            patch_obj=mover,
+            patch_name="move"
+        )
+        data, files, change = cpt_tester.checkpointed_move_test(init_samp)
+
+        assert not files
+        assert set(data) == {'mover', 'details'}
+        assert set(data['details'].to_dict()) == {'choice', 'chosen_mover',
+                                                  'probability', 'weights'}
+        assert change.canonical.mover == data['mover']
+        assert change.details == data['details']
 
 
 class TwoWayShootingMoverTest(TestShootingMover):

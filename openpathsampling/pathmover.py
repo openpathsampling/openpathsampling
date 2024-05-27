@@ -796,7 +796,8 @@ class EngineMover(SampleMover):
         if data:
             shooting_index = data['shooting_index']
         else:
-            shooting_index = self.selector.pick(initial_trajectory)
+            shooting_index = int(self.selector.pick(initial_trajectory))
+            checkpoint.save_checkpoint({'shooting_index': shooting_index})
 
         try:
             trial_trajectory, run_details = self._run(initial_trajectory,
@@ -2231,6 +2232,7 @@ class SpecializedRandomChoiceMover(RandomChoiceMover):
         return dct
 
     def move_core(self, samples):
+        # TODO: this doesn't seem to be called; may not be needed?
         weights = self.weights
         mover, details = self.select_mover(weights)
         subchange = mover.move_core(samples)
