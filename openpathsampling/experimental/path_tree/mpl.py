@@ -1,12 +1,13 @@
 from functools import partial
 from .options import canonicalize_mover
+from .plotter import PathTreePlotter
 
 # In addition to the standard `draw_trajectory` and `draw_connector` methods
 # required of all PathTree plot styles, plot styles based on matplotlib
 # should have the attribute `ax`, which returns the `Axes` object they plot
 # into.
 
-class MPLPlottingStyle:
+class MPLPlottingStyle(PathTreePlotter):
     """Abstract base class for matplotlib-based path tree plotting styles.
 
     Parameters
@@ -14,7 +15,15 @@ class MPLPlottingStyle:
     ax : :class:`.matplotlib.Axes`
         Axes object to plot into
     """
-    def __init__(self, ax):
+    def __init__(self, ax=None, options=None):
+        try:
+            import matplotlib.pyplot as plt
+        except ImportError:
+            raise RuntimeError("matplotlib is not installed")
+
+        super().__init__(options)
+        if ax is None:
+            _, ax = plt.subplots()
         self.ax = ax
 
     @staticmethod
@@ -62,11 +71,13 @@ class ThinLines(MPLPlottingStyle):
         'ForwardShootMover': partial(thin_lines_fix, direction=+1),
         'BackwardShootMover': partial(thin_lines_fix, direction=-1),
     }
-    def draw_trajectory(self, row, step, options):
-        mover, color, plot_segments = self.step_basics(step, options)
+    PLOT_TYPE = "trajectory"
+    def draw_trajectory(self, row, step):
+        mover = canonicalize_mover(step.mover)
+        plot_segments, color = self.get_step_plot_details(step)
         if mover in self.FIXES:
             plot_segments = [
-                self.FIXES[mover](segment, options.movers[mover])
+                self.FIXES[mover](segment, self.options.movers[mover])
                 for segment in plot_segments
             ]
 
@@ -74,7 +85,7 @@ class ThinLines(MPLPlottingStyle):
             self.ax.plot([left - 0.5, right - 0.5], [-row] * 2, lw=3,
                          color=color)
 
-    def draw_connector(self, x, bottom, top, step, options):
+    def draw_connector(self, x, bottom, top, step):
         self.ax.plot([x, x], [-bottom, -top], color='k')
 
 
@@ -95,22 +106,20 @@ class Blocks(MPLPlottingStyle):
         'ForwardShootMover': partial(_blocks_connector_fix, direction=+1),
         'BackwardShootMover': partial(_blocks_connector_fix, direction=-1),
     }
-    def __init__(self, ax, block_size=(0.8, 0.6)):
-        super().__init__(ax)
+    PLOT_TYPE = "snapshot"
+    def __init__(self, ax=None, options=None, *, block_size=(0.8, 0.6)):
+        super().__init__(ax, options)
         self.block_size = block_size
 
-    def draw_trajectory(self, row, step, options):
+    def draw_trajectory(self, row, step):
         """
         Parameters
         ----------
         row : int
             the row number (counting from the top) for this step
-        step : PathTreeStep
-            the PathTreeStep objects for this step
-        options : PathTreeOptions
-            options for this visualization
         """
-        mover, color, plot_segments = self.step_basics(step, options)
+        mover = canonicalize_mover(step.mover)
+        plot_segments, color = self.get_step_plot_details(step)
         # first we draw the background line
         for left, right in plot_segments:
             self.ax.plot([left - 0.5, right - 0.5], [-row]*2, color=color)
@@ -125,7 +134,7 @@ class Blocks(MPLPlottingStyle):
                               color=color)
                 )
 
-    def draw_connector(self, x, bottom, top, step, options):
+    def draw_connector(self, x, bottom, top, step):
         mover = canonicalize_mover(step.mover)
         if mover in self.FIXES:
             x = self.FIXES[mover](x)

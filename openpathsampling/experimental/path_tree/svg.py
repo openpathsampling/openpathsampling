@@ -1,12 +1,14 @@
 import xml.etree.ElementTree as ET
 from .options import canonicalize_mover
+from .plotter import PathTreePlotter
 
 def _stringify_values(dct):
     # also known as "XML is stupid"
     return {k: str(v) for k, v in dct.items()}
 
-class SVGRendering:
-    def __init__(self, hscale=10, vscale=10):
+class SVGLines(PathTreePlotter):
+    def __init__(self, options=None, hscale=10, vscale=10):
+        super().__init__(options)
         self.hscale = hscale
         self.vscale = vscale
         self.trajectories = []
@@ -22,8 +24,8 @@ class SVGRendering:
         plot_segments = mover_options.get_left_right(step)
         return mover, color, plot_segments
 
-    def draw_trajectory(self, row, step, options):
-        mover, color, plot_segments = self.step_basics(step, options)
+    def draw_trajectory(self, row, step):
+        plot_segments, color = self.get_step_plot_details(step)
         for left, right in plot_segments:
             if left < self.min_x:
                 self.min_x = left
@@ -40,7 +42,7 @@ class SVGRendering:
             elem = ET.Element("rect", attrib=_stringify_values(attrib))
             self.trajectories.append(elem)
 
-    def draw_connector(self, x, bottom, top, step, options):
+    def draw_connector(self, x, bottom, top, step):
         attrib = {
             "x1": x * self.hscale,
             "y1": (bottom + 0.25) * self.vscale,

@@ -2,7 +2,7 @@ from collections import namedtuple
 import logging
 import openpathsampling as paths
 
-from .options import create_default_options
+from .options import create_default_options, canonicalize_mover
 from .mpl import ThinLines
 
 Connector = namedtuple("Connector", ['frame', 'mccycle'])
@@ -129,7 +129,6 @@ def _replica_or_ensemble(replica, ensemble):
 class PathTree(paths.progress.SimpleProgress):
     def __init__(self, steps, replica=None, ensemble=None):
         self.selector = _replica_or_ensemble(replica, ensemble)
-        self.plotter = PathTreePlotter()
         if steps is not None:
             self.path_tree_steps = self.generate_path_tree_steps(steps)
 
@@ -225,52 +224,19 @@ class PathTree(paths.progress.SimpleProgress):
     def svg(self):
         raise NotImplementedError("Coming soon!")
 
-    def matplotlib(self, plot_style=None):
+    def matplotlib(self, plotter=None):
         try:
             import matplotlib.pyplot as plt
         except ImportError:
             raise RuntimeError("matplotlib is not installed")
 
-        if plot_style is None:
-            plot_style = self.plotter.plot_style
-        if plot_style is None:
-            plot_style = ThinLines
+        if plotter is None:
+            plotter = ThinLines
 
+        if type(plotter) is type:
+            plotter = plotter()
 
-        if type(plot_style) is type:
-            _, ax = plt.subplots()
-            plot_style = plot_style(ax)
-        else:
-            ax = plot_style.ax
+        ax = plotter.ax
+        plotter.draw_trajectories(self.path_tree_steps)
 
-        self.plotter.plot_style = plot_style
-        self.plotter.draw_trajectories(self.path_tree_steps)
         return ax.figure
-
-
-class PathTreePlotter(object):
-    def __init__(self):
-        self.options = create_default_options()
-        self.plot_style = None
-
-    def draw_by_trajectory(self, row, left, right, color, mover):
-        raise NotImplementedError()
-
-    def draw_by_snapshot(self, row, left, right, color, mover, gap=0.0):
-        raise NotImplementedError
-
-
-    def draw_trajectories(self, steps, block_offset=0):
-        mccycle_mapping = {}
-        for row, step in enumerate(self.options.filter_tree_steps(steps)):
-            mccycle_mapping[step.mccycle] = row
-
-            self.plot_style.draw_trajectory(row, step, self.options)
-
-            if step.connector is not None:
-                x = step.offset + step.connector.frame
-                bottom = mccycle_mapping[step.mccycle]
-                top = mccycle_mapping[step.connector.mccycle]
-                self.plot_style.draw_connector(x, bottom, top, step,
-                                               self.options)
-
