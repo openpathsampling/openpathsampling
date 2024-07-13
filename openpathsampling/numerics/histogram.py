@@ -147,8 +147,8 @@ class SparseHistogram(object):
         np.array :
             The values of the bin edges
         """
-        int_bins = np.array(self._histogram.keys())
-        left_bins = int_bins * self.bin_widths + self.left_bin_edges
+        int_bins = np.array(list(self._histogram.keys()))
+        left_bins = int_bins * np.array(self.bin_widths) + self.left_bin_edges
         return self._left_edge_to_bin_edge_type(left_bins, self.bin_widths,
                                                 bin_edge_type)
 
