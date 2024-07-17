@@ -11,18 +11,20 @@ class SVGLines(PathTreePlotter):
         super().__init__(options)
         self.hscale = hscale
         self.vscale = vscale
+
+    def _reset(self):
         self.trajectories = []
         self.connectors = []
         self.min_x = float("inf")
         self.max_x = float("-inf")
 
-    @staticmethod
-    def step_basics(step, options):
-        mover = canonicalize_mover(step.mover)
-        mover_options = options.movers[mover]
-        color = mover_options.color
-        plot_segments = mover_options.get_left_right(step)
-        return mover, color, plot_segments
+    # @staticmethod
+    # def step_basics(step, options):
+    #     mover = canonicalize_mover(step.mover)
+    #     mover_options = options.movers[mover]
+    #     color = mover_options.color
+    #     plot_segments = mover_options.get_left_right(step)
+    #     return mover, color, plot_segments
 
     def draw_trajectory(self, row, step):
         plot_segments, color = self.get_step_plot_details(step)
@@ -66,6 +68,8 @@ class SVGLines(PathTreePlotter):
             root.append(cnx)
         return root
 
-    def draw(self):
+    def draw(self, path_tree):
+        self._reset()
+        self.draw_trajectories(path_tree.path_tree_steps)
         root = self.build_svg()
         return ET.tostring(root)

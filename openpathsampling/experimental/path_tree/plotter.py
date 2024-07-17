@@ -43,3 +43,6 @@ class PathTreePlotter(object):
                 bottom = mccycle_mapping[step.mccycle]
                 top = mccycle_mapping[step.connector.mccycle]
                 self.draw_connector(x, bottom, top, step)
+
+    def draw(self, path_tree):
+        self.draw_trajectories(path_tree.path_tree_steps)
