@@ -273,7 +273,6 @@ class FirstFrameSelector(ShootingPointSelector):
         return 1.0
 
 
-
 class VolumeSelector(ShootingPointSelector):
     def __init__(self, volume):
         self.volume = volume
