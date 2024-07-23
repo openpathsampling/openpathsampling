@@ -271,3 +271,11 @@ class FirstFrameSelector(ShootingPointSelector):
         if new_snapshot is None:
             NEW_SNAPSHOT_SELECTOR.warn(stacklevel=3)
         return 1.0
+
+
+class VolumeSelector(ShootingPointSelector):
+    def __init__(self, volume):
+        self.volume = volume
+
+    def f(self, frame, trajectory):
+        return float(self.volume(frame))
