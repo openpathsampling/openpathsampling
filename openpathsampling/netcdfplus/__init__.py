@@ -1,7 +1,7 @@
 from .base import StorableNamedObject, StorableObject, create_to_dict
 from .cache import WeakKeyCache, WeakLRUCache, WeakValueCache, MaxCache, \
     NoCache, Cache, LRUCache, LRUChunkLoadingCache
-from .dictify import ObjectJSON, StorableObjectJSON, UUIDObjectJSON
+from .dictify import ObjectJSON, UUIDObjectJSON
 from .netcdfplus import NetCDFPlus
 
 from .stores import ObjectStore
