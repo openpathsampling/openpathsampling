@@ -30,6 +30,7 @@ accepted : bool
 connector : :class:`.Connector`
     information connecting the the shooting betwee this step and its
     original step
+segments: :class:`.TrajectorySegments`
 
 """
 TrajectorySegments = namedtuple("TrajectorySegments", ['existing', 'new'])
