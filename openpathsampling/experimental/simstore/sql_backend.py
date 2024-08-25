@@ -474,7 +474,7 @@ class SQLStorageBackend(StorableNamedObject):
         except KeyError:
             # TODO: this should be removed eventually
             deserialize = lambda x: x
-        return {row['uuid']: deserialize(row['value'])
+        return {row.uuid: deserialize(row.value)
                 for row in self.table_iterator(table_name)}
 
     def add_tag(self, table_name, name, content):

@@ -2,5 +2,3 @@ jupyter
 openmm>=7.6
 openmmtools
 py-plumed
-pyemma
-

@@ -251,6 +251,20 @@ class TestConstrainedSelector(SelectorTest):
         assert prob == expected
 
 
+class TestVolumeSelector(SelectorTest):
+    def setup_method(self):
+        super().setup_method()
+        self.cv = paths.FunctionCV("Id", lambda x: x.xyz[0][0])
+        vol = paths.CVDefinedVolume(self.cv, 0.15, 0.35)
+        self.sel = VolumeSelector(vol)
+
+    @pytest.mark.parametrize('frame,expected', [
+        (0, 0.0), (1, 0.0), (2, 1.0), (3, 1.0), (4, 0.0)
+    ])
+    def test_f(self, frame, expected):
+        assert self.sel.f(self.mytraj[frame], self.mytraj) == expected
+
+
 class TestDeprecations(object):
     @pytest.mark.parametrize('selector_class', [ShootingPointSelector,
                                                 FirstFrameSelector,
