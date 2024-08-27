@@ -3,11 +3,20 @@ ABCs to clarify types of plotting styles, to make it easier to implement
 others in the future.
 """
 
+from functools import partial
 from .options import canonicalize_mover, create_default_options
+
+def _connector_fix(x, direction):
+    """Move shooting point connector to the edge of the box"""
+    return x + 0.5 * direction
 
 class PathTreePlotter(object):
     """
     """
+    CONNECTOR_FIXES = {
+        'ForwardShootMover': partial(_connector_fix, direction=+1),
+        'BackwardShootMover': partial(_connector_fix, direction=-1),
+    }
     @property
     def PLOT_TYPE(self):
         raise NotImplementedError("Subclasses must be either 'snapshot' or "

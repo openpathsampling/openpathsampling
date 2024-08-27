@@ -7,6 +7,8 @@ from .plotter import PathTreePlotter
 # should have the attribute `ax`, which returns the `Axes` object they plot
 # into.
 
+
+
 class MPLPlottingStyle(PathTreePlotter):
     """Abstract base class for matplotlib-based path tree plotting styles.
 
@@ -37,25 +39,15 @@ class MPLPlottingStyle(PathTreePlotter):
     def draw_trajectory(self, row, step, options):
         raise NotImplementedError()
 
-    def draw_connector(self, x, bottom, top, step, options):
-        raise NotImplementedError()
+    def draw_connector(self, x, bottom, top, step):
+        mover = canonicalize_mover(step.mover)
+        if mover in self.CONNECTOR_FIXES:
+            x = self.CONNECTOR_FIXES[mover](x)
+
+        self.ax.plot([x,x], [-bottom, -top], color='k')
 
 
 ### ThinLines plotting style ###############################################
-
-def thin_lines_fix(left_right, mover_options, direction):
-    """Fix to extend trajectory by half a frame.
-
-    This ensures that the trajectory intersects with the shooting point
-    connector for one-way shooting with this approach.
-    """
-    if mover_options.show == 'new':
-        delta = -0.5 * direction
-        selection = {+1: 0, -1: 1}[direction]
-        left_right = list(left_right)
-        left_right[selection] += delta
-        left_right = tuple(left_right)
-    return left_right
 
 class ThinLines(MPLPlottingStyle):
     """ThinLines plotting style for matplotlib-based path trees.
@@ -67,45 +59,26 @@ class ThinLines(MPLPlottingStyle):
     is accomplished by the ``thin_lines_fix`` function.
 
     """
-    FIXES = {
-        'ForwardShootMover': partial(thin_lines_fix, direction=+1),
-        'BackwardShootMover': partial(thin_lines_fix, direction=-1),
-    }
     PLOT_TYPE = "trajectory"
     def draw_trajectory(self, row, step):
         mover = canonicalize_mover(step.mover)
         plot_segments, color = self.get_step_plot_details(step)
-        if mover in self.FIXES:
-            plot_segments = [
-                self.FIXES[mover](segment, self.options.movers[mover])
-                for segment in plot_segments
-            ]
 
         for left, right in plot_segments:
             self.ax.plot([left - 0.5, right - 0.5], [-row] * 2, lw=3,
                          color=color)
 
-    def draw_connector(self, x, bottom, top, step):
-        self.ax.plot([x, x], [-bottom, -top], color='k')
 
 
 ### Blocks plotting style ##################################################
 
 from matplotlib.patches import Rectangle
 
-def _blocks_connector_fix(x, direction):
-    """Move shooting point connector to the edge of the box"""
-    return x + 0.5 * direction
-
 class Blocks(MPLPlottingStyle):
     """Blocks plotting style for matplotlib-based path trees.
 
     The Blocks plotting style uses rectangular patches for each snapshot.
     """
-    FIXES = {
-        'ForwardShootMover': partial(_blocks_connector_fix, direction=+1),
-        'BackwardShootMover': partial(_blocks_connector_fix, direction=-1),
-    }
     PLOT_TYPE = "snapshot"
     def __init__(self, ax=None, options=None, *, block_size=(0.8, 0.6)):
         super().__init__(ax, options)
@@ -133,10 +106,3 @@ class Blocks(MPLPlottingStyle):
                     Rectangle((snap - width / 2, y), width, height,
                               color=color)
                 )
-
-    def draw_connector(self, x, bottom, top, step):
-        mover = canonicalize_mover(step.mover)
-        if mover in self.FIXES:
-            x = self.FIXES[mover](x)
-
-        self.ax.plot([x,x], [-bottom, -top], color='k')

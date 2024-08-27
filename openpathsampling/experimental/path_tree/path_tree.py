@@ -4,6 +4,7 @@ import openpathsampling as paths
 
 from .options import create_default_options, canonicalize_mover
 from .mpl import ThinLines
+from .svg import SVGLines
 
 Connector = namedtuple("Connector", ['frame', 'mccycle'])
 PathTreeStep = namedtuple(
@@ -222,8 +223,15 @@ class PathTree(paths.progress.SimpleProgress):
 
         return path_tree_steps
 
-    def svg(self):
-        raise NotImplementedError("Coming soon!")
+
+    def svg(self, plotter=None):
+        if plotter is None:
+            plotter = SVGLines
+
+        if type(plotter) is type:
+            plotter = plotter()
+
+        return plotter.draw(self)
 
     def matplotlib(self, plotter=None):
         try:

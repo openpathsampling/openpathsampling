@@ -11,6 +11,7 @@ class SVGLines(PathTreePlotter):
         super().__init__(options)
         self.hscale = hscale
         self.vscale = vscale
+        self._reset()
 
     def _reset(self):
         self.trajectories = []
@@ -29,6 +30,8 @@ class SVGLines(PathTreePlotter):
     def draw_trajectory(self, row, step):
         plot_segments, color = self.get_step_plot_details(step)
         for left, right in plot_segments:
+            left -= 0.5
+            right -= 0.5
             if left < self.min_x:
                 self.min_x = left
             if right > self.max_x:
@@ -45,6 +48,10 @@ class SVGLines(PathTreePlotter):
             self.trajectories.append(elem)
 
     def draw_connector(self, x, bottom, top, step):
+        mover = canonicalize_mover(step.mover)
+        if mover in self.CONNECTOR_FIXES:
+            x = self.CONNECTOR_FIXES[mover](x)
+
         attrib = {
             "x1": x * self.hscale,
             "y1": (bottom + 0.25) * self.vscale,
