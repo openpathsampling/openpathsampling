@@ -28,14 +28,6 @@ class MPLPlottingStyle(PathTreePlotter):
             _, ax = plt.subplots()
         self.ax = ax
 
-    # @staticmethod
-    # def step_basics(step, options):
-    #     mover = canonicalize_mover(step.mover)
-    #     mover_options = options.movers[mover]
-    #     color = mover_options.color
-    #     plot_segments = mover_options.get_left_right(step)
-    #     return mover, color, plot_segments
-
     def draw_trajectory(self, row, step, options):
         raise NotImplementedError()
 
