@@ -35,7 +35,7 @@ sql_type = {
 }
 
 universal_sql_meta = {
-    'uuid': {'uuid': {'primary_key': True}},
+    'uuid': {'uuid': {'primary_key': True, 'index': True}},
     'tables': {'name': {'primary_key': True}},
     'sfr_result_types': {'uuid': {'primary_key': True}},
 }
@@ -48,7 +48,7 @@ def make_columns(table_name, schema, sql_schema_metadata, backend_types):
     if table_name not in universal_schema:
         columns.append(sql.Column('idx', sql.Integer,
                                   primary_key=True))
-        columns.append(sql.Column('uuid', sql.String))
+        columns.append(sql.Column('uuid', sql.String, index=True))
     for col, type_name in schema[table_name]:
         col_type = sql_type[type_mapping[type_name]]
         metadata = extract_backend_metadata(sql_schema_metadata,

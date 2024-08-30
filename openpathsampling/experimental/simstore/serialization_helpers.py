@@ -8,7 +8,10 @@ import collections
 from .tools import flatten_all, nested_update, group_by_function
 from .tools import is_iterable, is_mappable, is_numpy_iterable
 from . import tools
-from .class_lookup import is_storage_iterable, is_storage_mappable
+from .class_lookup import (
+    is_storage_iterable, is_storage_mappable, is_storage_string,
+    has_storage_uuid,
+)
 from .proxy import GenericLazyLoader
 from .uuids import (
     has_uuid, get_uuid, set_uuid, encode_uuid, decode_uuid, encoded_uuid_re,
@@ -42,7 +45,7 @@ def unique_objects(object_list):
     found_uuids = set([])
     return_objects = []
     for obj in object_list:
-        if has_uuid(obj):
+        if has_storage_uuid(obj):
             uuid = get_uuid(obj)
             if uuid not in found_uuids:
                 found_uuids.update({uuid})
@@ -80,7 +83,7 @@ def default_find_uuids(obj, cache_list):
     """
     uuids = {}
     new_objects = []
-    obj_uuid = get_uuid(obj) if has_uuid(obj) else None
+    obj_uuid = get_uuid(obj) if has_storage_uuid(obj) else None
     # filter known uuids: skip processing if known
     if caches_contain(obj_uuid, [uuids] + cache_list):
         return uuids, new_objects
@@ -93,7 +96,7 @@ def default_find_uuids(obj, cache_list):
 
     # mappables and iterables
     if is_storage_mappable(obj):
-        new_objects.extend(o for o in obj.keys() if has_uuid(o))
+        new_objects.extend(o for o in obj.keys() if has_storage_uuid(o))
         new_objects.extend(obj.values())
     elif is_storage_iterable(obj):
         new_objects.extend(obj)
@@ -216,11 +219,11 @@ def replace_uuid(obj, uuid_encoding):
     # this is UUID => string
     replacement = obj
     # fast exit for string keys
-    if tools.is_string(obj):
+    if is_storage_string(obj):
         return replacement
-    if has_uuid(obj):
+    if has_storage_uuid(obj):
         replacement = uuid_encoding(get_uuid(obj))
-    elif is_mappable(obj):
+    elif is_storage_mappable(obj):
         replacement = {
             replace_uuid(k, uuid_encoding): replace_uuid(v, uuid_encoding)
             for (k, v) in replacement.items()
@@ -327,7 +330,7 @@ def from_dict_with_uuids(obj, cache_list):
         # (indicates problem in DAG reconstruction)
         uuid = decode_uuid(obj)
         replacement = search_caches(uuid, cache_list)
-    elif tools.is_string(obj):
+    elif is_storage_string(obj):
         # fast exit for string keys
         return obj
     elif is_mappable(obj):
