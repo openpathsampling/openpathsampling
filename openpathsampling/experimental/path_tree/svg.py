@@ -19,14 +19,6 @@ class SVGLines(PathTreePlotter):
         self.min_x = float("inf")
         self.max_x = float("-inf")
 
-    # @staticmethod
-    # def step_basics(step, options):
-    #     mover = canonicalize_mover(step.mover)
-    #     mover_options = options.movers[mover]
-    #     color = mover_options.color
-    #     plot_segments = mover_options.get_left_right(step)
-    #     return mover, color, plot_segments
-
     def draw_trajectory(self, row, step):
         plot_segments, color = self.get_step_plot_details(step)
         for left, right in plot_segments:

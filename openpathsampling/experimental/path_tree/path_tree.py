@@ -246,6 +246,6 @@ class PathTree(paths.progress.SimpleProgress):
             plotter = plotter()
 
         ax = plotter.ax
-        plotter.draw_trajectories(self.path_tree_steps)
+        plotter.draw(self)
 
         return ax.figure
