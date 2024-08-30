@@ -29,7 +29,7 @@ trajectory : :class:`.Trajectory`
 accepted : bool
     whether the step was accepted
 connector : :class:`.Connector`
-    information connecting the the shooting betwee this step and its
+    information connecting the the shooting between this step and its
     original step
 segments: :class:`.TrajectorySegments`
 
