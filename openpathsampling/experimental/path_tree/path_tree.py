@@ -43,6 +43,7 @@ def make_layout_blocks(path_tree_steps):
     If no frames are in common between successive steps, we create a new
     "block". Each block will be centered independently.
     """
+    # NOTE: this code is not yet used, but we'll need something like this
     steps = iter(path_tree_steps)
     first_step = next(steps)
     minimum = 0
@@ -51,7 +52,7 @@ def make_layout_blocks(path_tree_steps):
     block = [first_step]
     for step in steps:
         if step.offset is None:
-            block.append(block, maximum - minimum)
+            blocks.append(block, maximum - minimum)
             minumum = 0
             maximum = len(step.trajectory)
             block = []
