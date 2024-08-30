@@ -71,8 +71,8 @@ class PathTreeOptions(object):
         mover = canonicalize_mover(step.mover)
         include_rejected = self.rejected != 'hidden'
         skip_rejected = not include_rejected and not step.accepted
-        skip_allowed = self.allowed_movers and mover not in allowed
-        skip_forbidden = self.forbidden_movers and mover in forbidden
+        skip_allowed = self.allowed_movers and mover not in self.allowed_movers
+        skip_forbidden = self.forbidden_movers and mover in self.forbidden_movers
         return skip_rejected or skip_allowed or skip_forbidden
 
     def filter_tree_steps(self, tree_steps):
