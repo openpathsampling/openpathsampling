@@ -43,13 +43,6 @@ class MPLPlottingStyle(PathTreePlotter):
 
 class ThinLines(MPLPlottingStyle):
     """ThinLines plotting style for matplotlib-based path trees.
-
-    This is a plotting style based on using `ax.plot` and with the style
-    choice that the shooting point is always represented at the middle of
-    its frame. This needs to us filling half of the shooting point frame so
-    that the trajectory line intersects the shooting point connector. This
-    is accomplished by the ``thin_lines_fix`` function.
-
     """
     PLOT_TYPE = "trajectory"
     def draw_trajectory(self, row, step):
