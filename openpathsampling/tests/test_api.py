@@ -6,7 +6,7 @@ from .test_helpers import data_filename
 
 # select the file you want to use, or change to the file for your own API
 # (add more files to ensure that we support 1.0, 1.1, etc.)
-API_FILES = ["ops1x0_api.txt"]
+API_FILES = []  # we'll establish API 2.0 before release
 COMBO_ERROR = True
 
 @pytest.mark.parametrize('api_file', API_FILES)

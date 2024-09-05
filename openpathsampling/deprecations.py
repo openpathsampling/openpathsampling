@@ -125,50 +125,6 @@ SIMSTORE_NO_SFR_TYPES = Deprecation(
     deprecated_in=(1, 5, 1)
 )
 
-OPENMMTOOLS_VERSION = Deprecation(
-    problem="{OPS} {version} will require OpenMMTools 0.15 or later.",
-    remedy="Please update OpenMMTools.",
-    remove_version=(2, 0),
-    deprecated_in=(0, 9, 6)
-)
-
-SAMPLE_DETAILS = Deprecation(
-    problem="SampleDetails will be removed in {OPS} {version}.",
-    remedy="Use generic Details class instead.",
-    remove_version=(2, 0),
-    deprecated_in=(0, 9, 3)
-)
-
-MOVE_DETAILS = Deprecation(
-    problem="MoveDetails will be removed in {OPS} {version}.",
-    remedy="Use generic Details class instead.",
-    remove_version=(2, 0),
-    deprecated_in=(0, 9, 3)
-)
-
-SAVE_RELOAD_OLD_TPS_NETWORK = Deprecation(
-    problem="Old TPS networks will not be reloaded in {OPS} {version}.",
-    remedy="This file may not work with {OPS} {version}.",
-    remove_version=(2, 0),
-    deprecated_in=(0, 9, 3)
-)
-
-MSMBUILDER = Deprecation(
-    problem=("MSMBuilder is no longer maintained. "
-             + "MSMBFeaturizer is no longer officially supported."),
-    remedy="Create a CoordinateFunctionCV based on MSMBuilderFeaturizers.",
-    remove_version=(2, 0),
-    deprecated_in=(1, 1, 0)
-)
-
-PYEMMA = Deprecation(
-    problem=("PyEMMA is no longer maintained. "
-             "PyEMMAFeaturizerCV is no longer officially supported."),
-    remedy="Create a CoordinateFunctionCV to represent the same function.",
-    remove_version=(2, 0),
-    deprecated_in=(1, 6, 1)
-)
-
 OPENMM_MDTRAJTOPOLOGY = Deprecation(
     problem=("openpathsampling.engines.openmm.topology.MDTrajTopology "
              "has been moved."),
@@ -241,12 +197,7 @@ def has_deprecations(cls):
     """Decorator to ensure that docstrings get updated for wrapped class"""
     for obj in [cls] + list(vars(cls).values()):
         if callable(obj) and hasattr(obj, '__new_docstring'):
-            try:
-                obj.__doc__ = obj.__new_docstring
-            except AttributeError:
-                # probably Python 2; we can't update docstring in Py2
-                # see https://github.com/Chilipp/docrep/pull/9 and related
-                pass
+            obj.__doc__ = obj.__new_docstring
             del obj.__new_docstring
     return cls
 

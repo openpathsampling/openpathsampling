@@ -3,7 +3,6 @@ from openpathsampling.collectivevariable import (
     CoordinateGeneratorCV, InVolumeCV, CallableCV,
     MDTrajFunctionCV,
     PyEMMAFeaturizerCV,
-    MSMBFeaturizerCV,
 )
 from .plumed_wrapper import (
                              PLUMEDCV, PLUMEDInterface

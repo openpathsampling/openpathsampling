@@ -4,12 +4,7 @@ import numpy as np
 import warnings
 
 from openpathsampling.progress import SimpleProgress
-
-try:
-    from collections import abc
-except ImportError:
-    import collections as abc
-
+from collections import abc
 
 # based on http://stackoverflow.com/a/3387975
 class TransformedDict(abc.MutableMapping):
@@ -77,8 +72,7 @@ class SnapshotByCoordinateDict(TransformedDict):
                                                        *args, **kwargs)
 
 
-class ShootingPointAnalysisError(AssertionError):
-    # TODO this should inherit from a different Error type in OPS 2.0
+class ShootingPointAnalysisError(Exception):
     pass
 
 
