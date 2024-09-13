@@ -14,7 +14,7 @@ from .class_lookup import (
 )
 from .proxy import GenericLazyLoader
 from .uuids import (
-    has_uuid, get_uuid, set_uuid, encode_uuid, decode_uuid, encoded_uuid_re,
+    get_uuid, set_uuid, encode_uuid, decode_uuid, encoded_uuid_re,
     is_uuid_string
 )
 
