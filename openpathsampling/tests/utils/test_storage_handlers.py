@@ -16,6 +16,17 @@ class StorageHandlerTest:
 
         self._initialize_handler()
 
+    def _initialize_handler(self):
+        """Subclasses must implement this initialization routine.
+
+        This method must create the following stored objects:
+
+        * key ``prestored``, contents ``prestored contents``
+        * key ``nested/nest_prestored``, contents ``nested prestored
+          contents``
+        """
+        raise NotImplementedError()
+
     def teardown_method(self):
         self.tmpdir_manager.__exit__(None, None, None)
 
