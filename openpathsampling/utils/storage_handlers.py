@@ -17,14 +17,20 @@ class StorageHandler(ABC):
     """
     @abstractmethod
     def store(self, storage_label, source_path):
+        """Store the data in ``source_path`` at key ``storage_label``
+        """
         raise NotImplementedError()
 
     @abstractmethod
     def load(self, storage_label, target_path):
+        """Load the data from ``storage_label`` into file at ``target_path``
+        """
         raise NotImplementedError()
 
     @abstractmethod
     def delete(self, storage_label):
+        """Delete key ``storage_label`` from the object store.
+        """
         raise NotImplementedError()
 
     @abstractmethod
