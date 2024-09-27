@@ -7,7 +7,8 @@ import numpy as np
 
 from .tools import none_to_default
 from .callable_codec import CallableCodec
-from .serialization_helpers import get_uuid, has_uuid, default_find_uuids
+from .serialization_helpers import default_find_uuids
+from .uuids import get_uuid, has_uuid
 from .class_info import ClassInfo
 from .serialization_helpers import from_json_obj as deserialize_sim
 from openpathsampling.netcdfplus import StorableNamedObject
