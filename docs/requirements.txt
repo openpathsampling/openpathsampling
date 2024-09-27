@@ -10,3 +10,4 @@ pytables
 scikit-learn
 packaging
 sphinx_rtd_theme
+openpathsampling-cli
