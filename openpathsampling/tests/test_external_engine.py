@@ -7,6 +7,7 @@ from openpathsampling.engines.toy import ToySnapshot
 from openpathsampling.engines.external_engine import *
 
 import numpy as np
+import pytest
 
 import psutil
 
@@ -91,7 +92,7 @@ def teardown_module():
 
 
 class TestExternalEngine(object):
-    def setup(self):
+    def setup_method(self):
         self.descriptor = SnapshotDescriptor.construct(
             snapshot_class=ToySnapshot,
             snapshot_dimensions={'n_spatial': 1,
@@ -101,13 +102,15 @@ class TestExternalEngine(object):
             'n_frames_max': 10000,
             'engine_sleep': 100,
             'name_prefix': "test",
-            'engine_directory': engine_dir
+            'engine_directory': engine_dir,
+            'filename_setter': FilenameSetter()
         }
         fast_options = {
             'n_frames_max': 10000,
             'engine_sleep': 0,
             'name_prefix': "test",
-            'engine_directory': engine_dir
+            'engine_directory': engine_dir,
+            'filename_setter': FilenameSetter()
         }
         self.template = peng.toy.Snapshot(coordinates=np.array([[0.0]]),
                                           velocities=np.array([[1.0]]))
@@ -118,6 +121,16 @@ class TestExternalEngine(object):
                                                  self.descriptor,
                                                  self.template)
         self.ensemble = paths.LengthEnsemble(5)
+
+    def test_deprecation(self):
+        slow_options = {'n_frames_max': 10000,
+                        'engine_sleep': 100,
+                        'name_prefix': "test",
+                        'engine_directory': engine_dir}
+        with pytest.warns(FutureWarning, match='filename_setter'):
+            _ = ExampleExternalEngine(slow_options,
+                                      self.descriptor,
+                                      self.template)
 
     def test_start_stop(self):
         eng = self.fast_engine

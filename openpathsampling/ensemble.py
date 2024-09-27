@@ -253,6 +253,12 @@ class Ensemble(with_metaclass(abc.ABCMeta, StorableNamedObject)):
     def __eq__(self, other):
         if self is other:
             return True
+        if (
+            self.__class__ == other.__class__
+            and self.__uuid__ == other.__uuid__
+        ):
+            return True
+
         return str(self) == str(other)
 
     def __ne__(self, other):

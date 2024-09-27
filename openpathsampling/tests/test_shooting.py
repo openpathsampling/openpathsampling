@@ -14,7 +14,7 @@ import numpy as np
 
 
 class SelectorTest(object):
-    def setup(self):
+    def setup_method(self):
         self.mytraj = make_1d_traj(coordinates=[-0.5, 0.1, 0.2, 0.3, 0.5],
                                    velocities=[1.0, 1.0, 1.0, 1.0, 1.0])
         self.dyn = CalvinistDynamics([-0.5, -0.4, -0.3, -0.2, -0.1,
@@ -50,10 +50,27 @@ class TestShootingPointSelector(SelectorTest):
             assert sel.probability(frame, self.mytraj) == \
                     uniform.probability(frame, self.mytraj)
 
+    def test_pick(self):
+        sel = ShootingPointSelector()
+        test_traj_len = 22  # must be a multiple of 2 for this test
+        test_traj = [1 for _ in range(test_traj_len)]
+        # overwrite _biases to make sure we can only pick the last frame
+        sel._biases = lambda traj: [0 for _ in traj[:-1]] + [1]
+        assert sel.pick(test_traj) == test_traj_len - 1
+        # test pick first frame
+        sel._biases = lambda traj: [1] + [0 for _ in traj[1:]]
+        assert sel.pick(test_traj) == 0
+        # and test middle frame (only works if test_traj_len is a multiple of 2)
+        sel._biases = lambda traj: ([0 for _ in traj[:test_traj_len // 2]]
+                                    + [1]
+                                    + [0 for _ in traj[test_traj_len // 2 + 1:]]
+                                    )
+        assert sel.pick(test_traj) == test_traj_len // 2
+
 
 class TestGaussianBiasSelector(SelectorTest):
-    def setup(self):
-        super(TestGaussianBiasSelector, self).setup()
+    def setup_method(self):
+        super(TestGaussianBiasSelector, self).setup_method()
         self.cv = paths.FunctionCV("Id", lambda x: x.xyz[0][0])
         self.sel = GaussianBiasSelector(self.cv, alpha=2.0, l_0=0.25)
         self.f = [
@@ -85,8 +102,8 @@ class TestGaussianBiasSelector(SelectorTest):
 
 
 class TestBiasedSelector(SelectorTest):
-    def setup(self):
-        super(TestBiasedSelector, self).setup()
+    def setup_method(self):
+        super(TestBiasedSelector, self).setup_method()
         self.f = {
             'gaussian': [
                 0.32465246735834974,  # = exp(-2.0*(-0.5-0.25)**2)
@@ -185,7 +202,7 @@ class TestFinalFrameSelector(SelectorTest):
 
 
 class TestConstrainedSelector(SelectorTest):
-    def setup(self):
+    def setup_method(self):
         cvx = paths.FunctionCV('ID', lambda snap: snap.xyz[0][0])
         vol = paths.CVDefinedVolume(cvx, float('-inf'), 0)
         self.sel = InterfaceConstrainedSelector(vol)
@@ -232,6 +249,20 @@ class TestConstrainedSelector(SelectorTest):
         mod_traj += mytraj[idx+1:]
         prob = self.sel.probability_ratio(frame, mytraj, mod_traj, mod_frame)
         assert prob == expected
+
+
+class TestVolumeSelector(SelectorTest):
+    def setup_method(self):
+        super().setup_method()
+        self.cv = paths.FunctionCV("Id", lambda x: x.xyz[0][0])
+        vol = paths.CVDefinedVolume(self.cv, 0.15, 0.35)
+        self.sel = VolumeSelector(vol)
+
+    @pytest.mark.parametrize('frame,expected', [
+        (0, 0.0), (1, 0.0), (2, 1.0), (3, 1.0), (4, 0.0)
+    ])
+    def test_f(self, frame, expected):
+        assert self.sel.f(self.mytraj[frame], self.mytraj) == expected
 
 
 class TestDeprecations(object):

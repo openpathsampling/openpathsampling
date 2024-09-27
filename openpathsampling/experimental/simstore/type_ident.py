@@ -1,7 +1,7 @@
 import re
 import numbers
 import numpy as np
-from .serialization_helpers import has_uuid
+from .uuids import has_uuid
 
 
 class TypeStringError(RuntimeError):

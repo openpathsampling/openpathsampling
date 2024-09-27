@@ -28,6 +28,8 @@ from openpathsampling.experimental.simstore.attribute_handlers import \
 
 from openpathsampling.netcdfplus import StorableNamedObject
 
+import sqlalchemy.pool
+
 class InputObj(StorableNamedObject):
     pass  # just a thing that has a UUID
 
@@ -285,7 +287,7 @@ def test_multiple_storage_inside_other_object(tmpdir, inputs_and_func):
     container.cv.local_cache.clear()
     assert container.cv.func.call_count == 2
     assert container(inp2) == 'f'
-    assert container.cv.func.call_count == 2 
+    assert container.cv.func.call_count == 2
 
 def test_closing(tmpdir, inputs_and_func):
     inp1, inp2, func, sf, container = inputs_and_func
@@ -300,16 +302,21 @@ def test_closing(tmpdir, inputs_and_func):
     assert not sf.has_handler
 
 def test_storage_file_problem(tmpdir, inputs_and_func):
+    # need to switch back to NullPool in SQLAlchemy 2.0+, otherwise it
+    # appears to cache the old results. See discussion here:
+    # https://github.com/sqlalchemy/sqlalchemy/discussions/9167
     inp1, inp2, func, sf, container = inputs_and_func
     sf_uuid = str(get_uuid(sf))
     st1_fname = tmpdir.join("st1.db")
-    be_1w = SQLStorageBackend(st1_fname, mode='w')
+    be_1w = SQLStorageBackend(st1_fname, mode='w',
+                              poolclass=sqlalchemy.pool.NullPool)
     _store_via_container(be_1w, container, inp1, call_count=1,
                          backend_count=1)
 
     GeneralStorage._known_storages = {}
     storage = GeneralStorage(
-        backend=SQLStorageBackend(st1_fname, mode='r'),
+        backend=SQLStorageBackend(st1_fname, mode='r',
+                                  poolclass=sqlalchemy.pool.NullPool),
         class_info=_serialization,
         schema=_schema
     )
@@ -318,6 +325,7 @@ def test_storage_file_problem(tmpdir, inputs_and_func):
     assert container.cv.func.call_count == 1
     os.remove(st1_fname)  # naughty user behavior
 
+    # this requires using the NullPool, apparently
     with pytest.warns(UserWarning):
         assert container(inp1) == 'f'
     assert container.cv.func.call_count == 2

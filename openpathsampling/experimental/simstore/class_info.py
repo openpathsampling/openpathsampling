@@ -2,9 +2,10 @@ import logging
 
 from . import tools
 from .serialization import SchemaSerializer, SchemaDeserializer
-from .serialization_helpers import SchemaFindUUIDs, has_uuid
+from .serialization_helpers import SchemaFindUUIDs
 from .serialization_helpers import encoded_uuid_re, get_reload_order
 from .serialization_helpers import get_all_uuids
+from .uuids import has_uuid
 from .my_types import uuid_types, uuid_list_types, json_obj_types
 
 from . import attribute_handlers

@@ -10,8 +10,6 @@ import os
 
 import pytest
 
-from nose.tools import (assert_equal)
-
 import openpathsampling as paths
 
 import openpathsampling.engines.openmm as peng
@@ -22,13 +20,12 @@ from openpathsampling.storage import Storage
 from .test_helpers import (data_filename, md, compare_snapshot)
 
 import numpy as np
-from nose.plugins.skip import SkipTest
 
 
 class TestStorage(object):
-    def setup(self):
+    def setup_method(self):
         if not md:
-            raise SkipTest("mdtraj not installed")
+            pytest.skip("mdtraj not installed")
         self.mdtraj = md.load(data_filename("ala_small_traj.pdb"))
         _ = pytest.importorskip('simtk.unit')
         self.traj = peng.trajectory_from_mdtraj(
@@ -55,7 +52,7 @@ class TestStorage(object):
             engine=self.engine
         )
 
-    def teardown(self):
+    def teardown_method(self):
         if os.path.isfile(self.filename):
             os.remove(self.filename)
 
@@ -68,7 +65,7 @@ class TestStorage(object):
         store.close()
 
     def test_stored_topology(self):
-        raise SkipTest
+        pytest.skip()
         store = Storage(
             filename=self.filename,
             mode='w')
@@ -80,10 +77,8 @@ class TestStorage(object):
         # check if path topologies have the same JSON string
         # this also tests the simplifier for topologies
 
-        assert_equal(
-            self.simplifier.to_json(self.template_snapshot.topology),
-            self.simplifier.to_json(loaded_topology)
-        )
+        assert (self.simplifier.to_json(self.template_snapshot.topology)
+                == self.simplifier.to_json(loaded_topology))
 
         store.close()
 

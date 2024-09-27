@@ -1,11 +1,10 @@
 from __future__ import absolute_import
 from builtins import object
-from nose.tools import (assert_equal, assert_not_equal, assert_almost_equal,
-                        raises, assert_in)
-from nose.plugins.skip import SkipTest
 from numpy import isnan
+from numpy.testing import assert_almost_equal
 from .test_helpers import assert_items_almost_equal, assert_items_equal
 import collections
+import pytest
 
 import logging
 
@@ -14,7 +13,7 @@ from openpathsampling.numerics import (
 )
 
 class TestLookupFunctionGroup(object):
-    def setup(self):
+    def setup_method(self):
         x1 = [0.0, 1.0, 2.0, 3.0, 4.0]
         y1 = [0.1, 1.3, 1.8, 3.3, 4.2]
         luf1 = LookupFunction(x1, y1)
@@ -75,7 +74,7 @@ class TestLookupFunctionGroup(object):
 
 
 class TestVoxelLookupFunction(object):
-    def setup(self):
+    def setup_method(self):
         counter = collections.Counter({(0,0): 1.0, (0,2): 2.0, (1,4): 4.0,
                                        (-1,-1): 5.0})
         self.lookup = VoxelLookupFunction(left_bin_edges=(-1.0, 1.0),
@@ -84,15 +83,15 @@ class TestVoxelLookupFunction(object):
 
     def test_keys(self):
         keys = [(0,0), (0,2), (1,4), (-1,-1)]
-        assert_equal(len(list(self.lookup.keys())), len(keys))
+        assert len(list(self.lookup.keys())) == len(keys)
         for key in list(self.lookup.keys()):
-            assert_in(key, keys)
+            assert key in keys
 
     def test_values(self):
         values = [1.0, 2.0, 4.0, 5.0]
-        assert_equal(len(list(self.lookup.values())), len(values))
+        assert len(list(self.lookup.values())) == len(values)
         for val in list(self.lookup.values()):
-            assert_in(val, values)
+            assert val in values
 
     def test_bin_to_left_edge(self):
         assert_items_equal(self.lookup.bin_to_left_edge((0,0)), (-1.0, 1.0))
@@ -100,41 +99,41 @@ class TestVoxelLookupFunction(object):
 
     def test_val_to_bin(self):
         result_bin = self.lookup.val_to_bin((-0.25, 2.0))
-        assert_equal(len(result_bin), 2)
+        assert len(result_bin) == 2
         assert_items_equal(result_bin, [1.5, 4.0])
 
     def test_counter_by_bin_edges(self):
         bin_edge_counter = self.lookup.counter_by_bin_edges
         expected = {(-1.0, 1.0): 1.0, (-1.0,1.5): 2.0, (-0.5, 2.0): 4.0,
                     (-1.5, 0.75): 5.0}
-        assert_equal(len(expected), len(bin_edge_counter))
+        assert len(expected) == len(bin_edge_counter)
         for k in list(expected.keys()):
-            assert_equal(bin_edge_counter[k], expected[k])
+            assert bin_edge_counter[k] == expected[k]
 
     def test_df_2d(self):
         df1 = self.lookup.df_2d()
         assert_items_equal(df1.index, [-1, 0, 1])
         assert_items_equal(df1.columns, [-1, 0, 2, 4])
-        assert_equal(df1.at[-1, -1], 5.0)
-        assert_equal(isnan(df1.at[0, 4]), True)
+        assert df1.at[-1, -1] == 5.0
+        assert isnan(df1.at[0, 4])
 
         df2 = self.lookup.df_2d(x_range=(-1, 3), y_range=(-1, 4))
         assert_items_equal(df2.index, [-1, 0, 1, 2, 3])
         assert_items_equal(df2.columns, [-1, 0, 1, 2, 3, 4])
-        assert_equal(df2.at[-1, -1], 5.0)
-        assert_equal(isnan(df2.at[0, 4]), True)
-        assert_equal(isnan(df2.at[2, 3]), True)
+        assert df2.at[-1, -1] == 5.0
+        assert isnan(df2.at[0, 4])
+        assert isnan(df2.at[2, 3])
 
-    @raises(RuntimeError)
     def test_df_2d_not_2d(self):
         counter = collections.Counter({(0,0,0): 1.0})
         luf = VoxelLookupFunction(left_bin_edges=(0,0,0),
                                   bin_widths=(1,1,1),
                                   counter=counter)
-        luf.df_2d()
+        with pytest.raises(RuntimeError):
+            luf.df_2d()
 
     def test_call(self):
-        assert_equal(self.lookup((0.0, 0.0)), 0.0)   # no bin
-        assert_equal(self.lookup((-0.5, 2.0)), 4.0)  # bin edge
-        assert_equal(self.lookup((-0.4, 2.1)), 4.0)  # in bin
+        assert self.lookup((0.0, 0.0)) == 0.0   # no bin
+        assert self.lookup((-0.5, 2.0)) == 4.0  # bin edge
+        assert self.lookup((-0.4, 2.1)) == 4.0  # in bin
 

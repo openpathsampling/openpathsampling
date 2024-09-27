@@ -161,6 +161,14 @@ MSMBUILDER = Deprecation(
     deprecated_in=(1, 1, 0)
 )
 
+PYEMMA = Deprecation(
+    problem=("PyEMMA is no longer maintained. "
+             "PyEMMAFeaturizerCV is no longer officially supported."),
+    remedy="Create a CoordinateFunctionCV to represent the same function.",
+    remove_version=(2, 0),
+    deprecated_in=(1, 6, 1)
+)
+
 OPENMM_MDTRAJTOPOLOGY = Deprecation(
     problem=("openpathsampling.engines.openmm.topology.MDTrajTopology "
              "has been moved."),
@@ -204,6 +212,28 @@ NEW_SNAPSHOT_KWARG_SELECTOR = Deprecation(
     deprecated_in=(1, 6, 0)
 )
 
+NEW_DEFAULT_FILENAME_SETTER =  Deprecation(
+    problem=("The default FilenameSetter for external engines is now a counter"
+             ", but will become a random string. This is more robust against "
+             "accidental overwrites."),
+    remedy=("If you want to keep the old counting behavior, add "
+            '{"filename_setter": '
+            "paths.engines.external_engine.FilenameSetter() } to the 'options'"
+            " of this engine. Otherwise, this behavior will automatically "
+            "change to RandomStringFilenames in OPS 2.0."),
+    remove_version=(2, 0),
+    deprecated_in=(1, 6, 0)
+)
+
+SIMSTORE_CALLABLE_CODEC_STRING_NOT_BYTES = Deprecation(
+    problem=("The storage representation of callables stored by SimStore "
+             "has changed. Some functions stored in this file may not "
+             "work starting in {OPS} {version}"),
+    remedy=("Re-saving the data from this file into another file will "
+            "create something that can be loaded in that version."),
+    remove_version=(2, 0),
+    deprecated_in=(1, 6, 0)
+)
 
 # has_deprecations and deprecate hacks to change docstrings inspired by:
 # https://stackoverflow.com/a/47441572/4205735

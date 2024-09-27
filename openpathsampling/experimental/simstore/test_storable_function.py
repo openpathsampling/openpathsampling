@@ -71,7 +71,7 @@ def test_wrap_numpy():
         assert isinstance(wrap_numpy(inp), np.ndarray)
 
 class TestStorableFunctionConfig(object):
-    def setup(self):
+    def setup_method(self):
         self.config = StorableFunctionConfig(processors=[
             scalarize_singletons,
             wrap_numpy,
@@ -160,7 +160,7 @@ class TestStorableFunctionConfig(object):
 
 
 class TestStorableFunctionResults(object):
-    def setup(self):
+    def setup_method(self):
         self.cv = StorableFunction(lambda x: x)
         self.cv.__uuid__ = "funcUUID"
         self.mapping = {'UUID1': "foo",
@@ -213,13 +213,13 @@ class TestStorableFunctionResults(object):
         assert len(self.sfr) == 2
 
     def test_to_dict_from_dict_cycle(self):
-        pass
+        pytest.skip()
 
 
 @mock.patch(_MODULE + '.get_uuid', lambda x: x)
 @mock.patch(_MODULE + '.has_uuid', lambda x: isinstance(x, str))
 class TestStorableFunction(object):
-    def setup(self):
+    def setup_method(self):
         def get_expected(uuid):
             expected = {'uuid': 'eval', 'uuid1': 'other'}
             return expected[uuid]
@@ -246,15 +246,12 @@ class TestStorableFunction(object):
 
     def test_gets_source(self):
         pytest.skip()
-        pass
 
     def test_no_source_warning(self):
         pytest.skip()
-        pass
 
     def test_disk_cache_property(self):
         pytest.skip()
-        pass
 
     @pytest.mark.parametrize('mode', ['no-caching', 'analysis',
                                       'production'])
@@ -374,12 +371,21 @@ class TestStorableFunction(object):
 
 
     def test_to_dict_from_dict_cycle(self):
-        pytest.skip()
-        pass
+        def identity(obj):
+            return obj
+
+        func = StorableFunction(func=identity, period_min=-2, period_max=2,
+                                store_source=True)
+        dct = func.to_dict()
+        assert 'identity' in dct['source']
+        assert dct['period_max'] == 2
+        assert dct['period_min'] == -2
+        obj = StorableFunction.from_dict(dct.copy())
+        reser = obj.to_dict()
+        assert dct == reser
 
     def test_full_serialization_cycle(self):
         pytest.skip()
-        pass
 
     @pytest.mark.parametrize('found_in', ['cache', 'storage', 'eval'])
     def test_analysis_mode_integration(self, found_in):
@@ -388,7 +394,7 @@ class TestStorableFunction(object):
 
 
 class TestStorageFunctionHandler(object):
-    def setup(self):
+    def setup_method(self):
         self.backend = MockBackend()
         self.storage = mock.NonCallableMock(backend=self.backend)
         self.sf_handler = StorageFunctionHandler(self.storage)

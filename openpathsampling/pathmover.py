@@ -2006,7 +2006,7 @@ class ConditionalSequentialMover(SequentialMover):
 
 
 class NonCanonicalConditionalSequentialMover(ConditionalSequentialMover):
-    """ Special mover for reactive flux simulation.
+    """ Special mover for reactive flux and S-shooting simulation.
 
     This mover inherits from :class:`.ConditionalSequentialMover` and
     alters only the `move` method to return the output of the corresponding

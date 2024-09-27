@@ -44,7 +44,7 @@ else:
     HAS_SIMTK_UNIT = True
 
 def error_if_no_simtk_unit(name):
-    return error_if_no(name, "simtk.unit", HAS_SIMTK_UNIT)
+    return error_if_no(name, "openmm.unit or simtk.unit", HAS_SIMTK_UNIT)
 
 # mdtraj ############################################################
 try:
