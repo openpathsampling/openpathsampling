@@ -10,7 +10,7 @@ available via either ``conda`` or ``pip``:
 
     conda install -c conda-forge openpathsampling-cli
     # or
-    pip install openpathsampling-cli
+    python -m pip install openpathsampling-cli
 
 Once you install this, you'll have access to the command
 ``openpathsampling`` in your shell (although we recommend aliasing that to
