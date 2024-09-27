@@ -50,9 +50,17 @@ scheme:
 
 strategy:
   header: Move Strategies
+  description: |
+    Move strategies define the specific types of moves that are used in a
+    move scheme, and set parameters on those moves.
 
 shooting-point-selector:
   header: Shooting Point Selectors
+  description: |
+    Shooting point selectors determine how a a shooting move selects the
+    shooting point. Custom versions are frequently used to focus the
+    shooting effort in particular regions of phase space, such as near
+    barriers or near interface boundaries.
 
 ~:
   header: MISSING TYPE INFORMATION
