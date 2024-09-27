@@ -46,8 +46,9 @@ sys.path.insert(0,os.path.abspath('../openpathsampling/'))
 # -- Preparing the CLI docs -----------------------------------------------
 orig_cwd = os.getcwd()
 try:
-    cli_input_dir = os.path.abspath("./cli/compile/input/")
-    os.chdir(cli_input_dir)
+    mydir = os.path.dirname(__file__)
+    cli_inp_dir = os.path.abspath(os.path.join(mydir, "cli/compile/input/"))
+    os.chdir(cli_inp_dir)
     gen_cli_docs("categories.yml", stdout=False)
 finally:
     os.chdir(orig_cwd)
