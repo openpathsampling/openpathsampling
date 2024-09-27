@@ -1,0 +1,2 @@
+# all RST files in this directory should be generated during build
+*.rst
