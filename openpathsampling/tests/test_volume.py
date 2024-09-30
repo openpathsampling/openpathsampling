@@ -226,7 +226,7 @@ class TestCVDefinedVolume(object):
 
 
 class TestCVRangeVolumePeriodic(object):
-    def setup(self):
+    def setup_method(self):
         self.pvolA = volume.PeriodicCVDefinedVolume(op_id, -100, 75)
         self.pvolA_ = volume.PeriodicCVDefinedVolume(op_id, 75, -100)
         self.pvolB = volume.PeriodicCVDefinedVolume(op_id, 50, 100)

@@ -107,7 +107,7 @@ def teardown_module():
 
 
 class TestExternalEngine(object):
-    def setup(self):
+    def setup_method(self):
         self.descriptor = SnapshotDescriptor.construct(
             snapshot_class=ToySnapshot,
             snapshot_dimensions={'n_spatial': 1,

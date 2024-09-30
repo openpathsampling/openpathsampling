@@ -11,7 +11,7 @@ on:
     #branch: master
 
 jobs:
-  check-rc:
+  check_rc:
     if: ${{ github.repository == 'openpathsampling/openpathsampling' }}
     runs-on: ubuntu-latest
     name: "Check for OpenMM RC"
@@ -24,8 +24,11 @@ jobs:
           package: openmm
           ndays: 3
           labels: openmm_rc
-      - uses: benc-uk/workflow-dispatch@v1
-        with:
-          workflow: Test OpenMM Release Candidate
-          token: ${{ secrets.DISPATCH_TOKEN }}
-        if: ${{ steps.checkrc.outputs.hasrc == 'True' }}
+    outputs:
+      hasrc: ${{ steps.checkrc.outputs.hasrc }}
+
+  test_rc:
+    needs: check_rc
+    uses: ./.github/workflows/test-openmm-rc.yml
+    secrets: inherit
+    if: ${{ needs.check_rc.outputs.hasrc == 'True' }}

@@ -1,0 +1,66 @@
+engine:
+  header: Engines
+  description: |
+    Engines provide the interface to the external tools that actually
+    perform the molecular dynamics. Usually you set up an engine using its
+    native tools, and provide OPS with those configuration files.
+
+    Engines can be made under the top-level keyword ``engines``.
+
+cv:
+  header: Collective Variables
+  description: |
+    Collective variables (CVs) are functions that map an MD snapshot to a
+    number. They are typically used to define stable states and interface sets.
+
+    CVs can be made under the top-level keyword ``cvs``.
+
+volume:
+  header: Volumes
+  description: |
+    State and interface definitions in OpenPathSampling are (hyper)volumes
+    in phase space. Use these tools to define states and the substituent
+    volumes that comprise them.
+
+    Volumes can be made under the top-level keywords ``volumes`` or
+    ``states``. The ``volumes`` keyword is parsed first, so ``states`` can
+    depend on ``volumes`` but not vice versa.
+
+network:
+  header: Networks
+  description: |
+    Networks represent the collection of path ensembles to be sampled.
+
+    Networks can be made under the top-level keyword ``networks``.
+
+scheme:
+  header: Move Schemes
+  description: |
+    Move schemes define the Monte Carlo moves to be used during path
+    sampling. There is one move scheme per path sampling simulation; it may
+    consist of multiple move strategies that create individual Monte Carlo
+    moves.
+
+    Some move schemes are designed to be used as-is, without allowing the
+    user to mix in other move strategies. Others are designed to be extended
+    by additional strategies.
+
+    Move schemes can be made under the top-level keyword ``schemes``.
+
+
+strategy:
+  header: Move Strategies
+  description: |
+    Move strategies define the specific types of moves that are used in a
+    move scheme, and set parameters on those moves.
+
+shooting-point-selector:
+  header: Shooting Point Selectors
+  description: |
+    Shooting point selectors determine how a a shooting move selects the
+    shooting point. Custom versions are frequently used to focus the
+    shooting effort in particular regions of phase space, such as near
+    barriers or near interface boundaries.
+
+~:
+  header: MISSING TYPE INFORMATION

@@ -2,13 +2,8 @@ from __future__ import absolute_import
 from builtins import object
 import logging
 
-from nose.tools import (
-    assert_equal, assert_not_equal, raises
-)
-from nose.plugins.skip import SkipTest
 from .test_helpers import (CallIdentity, prepend_exception_message,
                            make_1d_traj, assert_items_equal)
-
 
 import openpathsampling as paths
 from .test_helpers import make_1d_traj
@@ -18,7 +13,7 @@ logging.getLogger('opentis.initialization').setLevel(logging.CRITICAL)
 logging.getLogger('openpathsampling.storage').setLevel(logging.CRITICAL)
 
 class TestSummarizeTrajectoryVolumes(object):
-    def setup(self):
+    def setup_method(self):
         op = paths.FunctionCV("Id", lambda snap : snap.coordinates[0][0])
         vol1 = paths.CVDefinedVolume(op, 0.1, 0.5)
         vol2 = paths.CVDefinedVolume(op, -0.1, 0.7)
@@ -55,7 +50,7 @@ class TestSummarizeTrajectoryVolumes(object):
             "A-B-I-X"
         )
         assert_items_equal(
-            self._make_traj("abix").summarize_by_volumes_str(voldict, " blah "), 
+            self._make_traj("abix").summarize_by_volumes_str(voldict, " blah "),
             "A blah B blah I blah X"
         )
 
@@ -84,7 +79,7 @@ class TestSummarizeTrajectoryVolumes(object):
         )
 
 class TestSubtrajectoryIndices(object):
-    def setup(self):
+    def setup_method(self):
         op = paths.FunctionCV("Id", lambda snap : snap.coordinates[0][0])
         vol1 = paths.CVDefinedVolume(op, 0.1, 0.5)
         vol2 = paths.CVDefinedVolume(op, -0.1, 0.7)
@@ -119,22 +114,22 @@ class TestSubtrajectoryIndices(object):
         subtrajectoriesABA = ensemble_ABA.split(trajectory)
 
         # make sure we have the trajectories we expect
-        assert_equal(len(subtrajectoriesA), 3)
-        assert_equal(len(subtrajectoriesB), 2)
-        assert_equal(len(subtrajectoriesABA), 1)
+        assert len(subtrajectoriesA) == 3
+        assert len(subtrajectoriesB) == 2
+        assert len(subtrajectoriesABA) == 1
         # the following assertions check that the subtrajectories are the
         # ones that we expect; the numbers here are linked to the indices
         # we'll test next
-        assert_equal(subtrajectoriesA[0], trajectory[0:2])
-        assert_equal(subtrajectoriesA[1], trajectory[3:4])
-        assert_equal(subtrajectoriesA[2], trajectory[11:13])
-        assert_equal(subtrajectoriesB[0], trajectory[5:7])
-        assert_equal(subtrajectoriesB[1], trajectory[8:9])
-        assert_equal(subtrajectoriesABA[0], trajectory[3:12])
+        assert subtrajectoriesA[0] == trajectory[0:2]
+        assert subtrajectoriesA[1] == trajectory[3:4]
+        assert subtrajectoriesA[2] == trajectory[11:13]
+        assert subtrajectoriesB[0] == trajectory[5:7]
+        assert subtrajectoriesB[1] == trajectory[8:9]
+        assert subtrajectoriesABA[0] == trajectory[3:12]
         # now we run the subtrajectory_indices function and test it
         indicesA = trajectory.subtrajectory_indices(subtrajectoriesA)
         indicesB = trajectory.subtrajectory_indices(subtrajectoriesB)
         indicesABA = trajectory.subtrajectory_indices(subtrajectoriesABA)
-        assert_equal(indicesA, [[0, 1], [3], [11, 12]])
-        assert_equal(indicesB, [[5, 6], [8]])
-        assert_equal(indicesABA, [[3, 4, 5, 6, 7, 8, 9, 10, 11]])
+        assert indicesA == [[0, 1], [3], [11, 12]]
+        assert indicesB == [[5, 6], [8]]
+        assert indicesABA == [[3, 4, 5, 6, 7, 8, 9, 10, 11]]

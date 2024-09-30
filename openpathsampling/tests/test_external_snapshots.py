@@ -45,7 +45,7 @@ class ErrorMockEngine(MockEngine):
 
 
 class TestExternalMDSnapshot(object):
-    def setup(self):
+    def setup_method(self):
         self.box = np.array([[1.0, 0.0], [0.0, 1.0]])
         self.vel = np.array([[1.0, 0.0]])
 

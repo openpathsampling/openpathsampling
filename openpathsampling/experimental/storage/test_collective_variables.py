@@ -26,7 +26,7 @@ else:
 
 
 class TestCollectiveVariable(object):
-    def setup(self):
+    def setup_method(self):
         self.cv = CollectiveVariable(lambda x: x.xyz[0][0])
         self.traj = make_1d_traj([1.0, 2.0, 3.0])
         ensemble = paths.LengthEnsemble(3)
@@ -47,7 +47,7 @@ class TestCollectiveVariable(object):
 # TODO: It turns out that trajectories don't currently store their reversed
 # partners. This test won't work until that idea is implemented.
 # class TestReversibleStorableFunction(object):
-    # def setup(self):
+    # def setup_method(self):
         # self.func = ReversibleStorableFunction(
             # func=mock.MagicMock(return_value=3.0),
             # result_type='float'
@@ -72,7 +72,7 @@ class TestCollectiveVariable(object):
 
 
 class TestCoordinateFunctionCV(object):
-    def setup(self):
+    def setup_method(self):
         # On using side_effect: https://stackoverflow.com/a/16162114
         mock_func = mock.MagicMock(side_effect=lambda s: s.xyz[0][0])
         self.func = CoordinateFunctionCV(mock_func)
@@ -117,7 +117,7 @@ class TestCoordinateFunctionCV(object):
 
 
 class TestMDTrajFunctionCV(object):
-    def setup(self):
+    def setup_method(self):
         if not HAS_MDTRAJ:
             pytest.skip("Unable to import MDTraj")
         pytest.importorskip('simtk.unit')

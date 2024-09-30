@@ -10,7 +10,7 @@ def test_compare_sets():
     pytest.skip()
 
 class TestGroupBy(object):
-    def setup(self):
+    def setup_method(self):
         pass
 
 class TestListify(object):
@@ -25,7 +25,7 @@ class TestListify(object):
 
 
 class TestFlatten(object):
-    def setup(self):
+    def setup_method(self):
         self.result = ['a', 'b', 'c', 'd', 'e', 'f']
         self.list = ['a', 'b', [['c'], ['d'], 'e'], [['f']]]
         self.dict = {11: 'a', 12: 'b',

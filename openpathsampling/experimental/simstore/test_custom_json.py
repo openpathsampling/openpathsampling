@@ -54,7 +54,7 @@ class CustomJSONCodingTest(object):
 
 
 class TestNumpyCoding(CustomJSONCodingTest):
-    def setup(self):
+    def setup_method(self):
         self.codec = numpy_codec
         self.objs = [np.array([[1.0, 0.0], [2.0, 3.2]]),
                      np.array([1, 0])]
@@ -89,7 +89,7 @@ class TestNumpyCoding(CustomJSONCodingTest):
 
 
 class TestUUIDCoding(object):
-    def setup(self):
+    def setup_method(self):
         self.codec = uuid_object_codec
         all_objs = test_utils.all_objects
         self.objs = [all_objs['int'], all_objs['str']]

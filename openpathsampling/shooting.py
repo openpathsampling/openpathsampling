@@ -85,7 +85,7 @@ class ShootingPointSelector(StorableNamedObject):
         rand = self._rng.random() * sum_bias
         idx = 0
         prob = prob_list[0]
-        while prob <= rand and idx < len(prob_list):
+        while prob <= rand and idx < len(prob_list) - 1:
             idx += 1
             prob += prob_list[idx]
 
@@ -271,3 +271,11 @@ class FirstFrameSelector(ShootingPointSelector):
         if new_snapshot is None:
             NEW_SNAPSHOT_SELECTOR.warn(stacklevel=3)
         return 1.0
+
+
+class VolumeSelector(ShootingPointSelector):
+    def __init__(self, volume):
+        self.volume = volume
+
+    def f(self, frame, trajectory):
+        return float(self.volume(frame))

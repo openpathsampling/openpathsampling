@@ -161,6 +161,14 @@ MSMBUILDER = Deprecation(
     deprecated_in=(1, 1, 0)
 )
 
+PYEMMA = Deprecation(
+    problem=("PyEMMA is no longer maintained. "
+             "PyEMMAFeaturizerCV is no longer officially supported."),
+    remedy="Create a CoordinateFunctionCV to represent the same function.",
+    remove_version=(2, 0),
+    deprecated_in=(1, 6, 1)
+)
+
 OPENMM_MDTRAJTOPOLOGY = Deprecation(
     problem=("openpathsampling.engines.openmm.topology.MDTrajTopology "
              "has been moved."),
@@ -217,7 +225,15 @@ NEW_DEFAULT_FILENAME_SETTER =  Deprecation(
     deprecated_in=(1, 6, 0)
 )
 
-
+SIMSTORE_CALLABLE_CODEC_STRING_NOT_BYTES = Deprecation(
+    problem=("The storage representation of callables stored by SimStore "
+             "has changed. Some functions stored in this file may not "
+             "work starting in {OPS} {version}"),
+    remedy=("Re-saving the data from this file into another file will "
+            "create something that can be loaded in that version."),
+    remove_version=(2, 0),
+    deprecated_in=(1, 6, 0)
+)
 
 # has_deprecations and deprecate hacks to change docstrings inspired by:
 # https://stackoverflow.com/a/47441572/4205735

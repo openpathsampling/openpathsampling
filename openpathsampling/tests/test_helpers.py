@@ -278,7 +278,10 @@ class RandomMDEngine(DynamicsEngine):
 
 def raises_with_message_like(err, message=None):
     """
-    Decorator that allows to run nosetests with raises and testing if the message starts with a txt.
+    Decorator that allows to run tests with raises and testing if the
+    message starts with a txt.
+
+    TODO: this should be deprecated in favor of pytest functionality
 
     Notes
     -----

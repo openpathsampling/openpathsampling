@@ -1,7 +1,11 @@
 import types
 import dis
 import dill
-from .serialization_helpers import has_uuid, do_import
+import codecs
+from .serialization_helpers import do_import
+from .uuids import has_uuid
+from openpathsampling.deprecations \
+        import SIMSTORE_CALLABLE_CODEC_STRING_NOT_BYTES
 
 GLOBALS_ERROR_MESSAGE="""
 The function you tried to save uses information from global scope, which
@@ -125,9 +129,10 @@ class CallableCodec(object):
             if errors:
                 raise RuntimeError("Cannot store function! \n\n" + errors)
 
+            dillbytes = dill.dumps(obj, recurse=True)
             return {
                 '__callable_name__': obj.__name__,
-                '_dilled': dill.dumps(obj)
+                '_dilled': str(codecs.encode(dillbytes, 'base64'), 'utf-8')
             }
         return obj
 
@@ -138,7 +143,16 @@ class CallableCodec(object):
             elif '__module__' in dct:
                 func = do_import(dct['__module__'], dct['__callable_name__'])
             elif '_dilled' in dct:
-                func =  dill.loads(dct['_dilled'])
+                dilled = dct['_dilled']
+
+                if isinstance(dilled, bytes):
+                    SIMSTORE_CALLABLE_CODEC_STRING_NOT_BYTES.warn(
+                        category=FutureWarning
+                    )
+                    dilled = str(codecs.encode(dilled, 'base64'), 'utf-8')
+
+                dilledbytes = bytes(dilled, 'utf-8')  # or ascii
+                func =  dill.loads(codecs.decode(dilledbytes, 'base64'))
             else:  # pragma: no cover
                 raise RuntimeError("Error reloading ",
                                    dct['__callable_name__'])

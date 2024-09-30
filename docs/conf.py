@@ -24,6 +24,17 @@ import openpathsampling
 
 import sphinx_rtd_theme
 
+# Get tools to build CLI-specific docs if CLI is available
+try:
+    import paths_cli.compiling.gendocs
+except ImportError:
+    HAS_OPS_CLI = False
+    def gen_cli_docs(config_file, stdout=False):
+        pass
+else:
+    HAS_OPS_CLI = True
+    gen_cli_docs = paths_cli.compiling.gendocs.do_main
+
 # If extensions (or modules to document with autodoc) are in another directory,
 # add these directories to sys.path here. If the directory is relative to the
 # documentation root, use os.path.abspath to make it absolute, like shown here.
@@ -32,12 +43,23 @@ import sphinx_rtd_theme
 sys.path.insert(0,os.path.abspath('../openpathsampling/'))
 #sys.path.append(os.path.abspath('_themes'))
 
+# -- Preparing the CLI docs -----------------------------------------------
+orig_cwd = os.getcwd()
+try:
+    mydir = os.path.dirname(__file__)
+    cli_inp_dir = os.path.abspath(os.path.join(mydir, "cli/compile/input/"))
+    os.chdir(cli_inp_dir)
+    gen_cli_docs("categories.yml", stdout=False)
+finally:
+    os.chdir(orig_cwd)
+
 # -- Copying examples over into the docs/examples -------------------------
 try:
     shutil.copytree(os.path.abspath("../examples/alanine_dipeptide_tps"),
                     os.path.abspath("examples/alanine_dipeptide_tps"))
 except OSError:
     pass   # there should be a backup here....
+
 
 # -- General configuration ------------------------------------------------
 
@@ -107,7 +129,7 @@ master_doc = 'index'
 
 # General information about the project.
 project = u'OpenPathSampling'
-copyright = u'2014-2021, David W.H. Swenson, Jan-Hendrik Prinz, John Chodera, Peter Bolhuis'
+copyright = u'2014-2022, David W.H. Swenson, Jan-Hendrik Prinz, John Chodera, Peter Bolhuis'
 
 # The version info for the project you're documenting, acts as replacement for
 # |version| and |release|, also used in various other places throughout the
@@ -156,6 +178,10 @@ pygments_style = 'sphinx'
 
 # If true, keep warnings as "system message" paragraphs in the built documents.
 #keep_warnings = False
+
+
+def setup(app):
+    app.add_config_value('HAS_OPS_CLI', HAS_OPS_CLI, 'env')
 
 
 # -- Options for HTML output ----------------------------------------------

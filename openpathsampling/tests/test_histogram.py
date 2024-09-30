@@ -5,6 +5,7 @@ from builtins import object
 from .test_helpers import assert_items_almost_equal, assert_items_equal
 import pytest
 import logging
+from numpy import testing as npt
 logging.getLogger('openpathsampling.initialization').setLevel(logging.CRITICAL)
 logging.getLogger('openpathsampling.ensemble').setLevel(logging.CRITICAL)
 logging.getLogger('openpathsampling.storage').setLevel(logging.CRITICAL)
@@ -45,7 +46,7 @@ class TestFunctions(object):
 
 
 class TestHistogram(object):
-    def setup(self):
+    def setup_method(self):
         self.data = [1.0, 1.1, 1.2, 1.3, 2.0, 1.4, 2.3, 2.5, 3.1, 3.5]
         self.nbins = 5
         self.bins = [1.0, 1.5, 2.0, 2.5, 3.0, 3.5]
@@ -189,7 +190,7 @@ class TestHistogram(object):
 
 
 class TestSparseHistogram(object):
-    def setup(self):
+    def setup_method(self):
         data = [(0.0, 0.1), (0.2, 0.7), (0.3, 0.6), (0.6, 0.9)]
         self.histo = SparseHistogram(bin_widths=(0.5, 0.3),
                                      left_bin_edges=(0.0, -0.1))
@@ -212,6 +213,14 @@ class TestSparseHistogram(object):
         # empty voxel gives 0
         assert histo_fcn((2.00, 2.00)) == 0
 
+    @pytest.mark.parametrize('side,expected', [
+        ('l', [[0.0, -0.1], [0.0, 0.5], [0.5, 0.8]]),
+        ('r', [[0.5, 0.2], [0.5, 0.8], [1.0, 1.1]]),
+        ('m', [[0.25, 0.05], [0.25, 0.65], [0.75, 0.95]]),
+    ])
+    def test_xvals(self, side, expected):
+        npt.assert_almost_equal(self.histo.xvals(side), expected)
+
     def test_normalized(self):
         raw_prob_normed = self.histo.normalized(raw_probability=True)
         assert pytest.approx(raw_prob_normed((0.25, 0.65))) == 0.5
@@ -232,7 +241,7 @@ class TestSparseHistogram(object):
 
 
 class TestHistogramPlotter2D(object):
-    def setup(self):
+    def setup_method(self):
         data = [(0.0, 0.1), (0.2, 0.7), (0.3, 0.6), (0.6, 0.9)]
         histo = SparseHistogram(bin_widths=(0.5, 0.3),
                                 left_bin_edges=(0.0, -0.1))
