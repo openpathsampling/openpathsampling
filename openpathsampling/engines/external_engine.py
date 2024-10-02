@@ -271,7 +271,7 @@ class ExternalEngine(DynamicsEngine):
         if self.first_frame_in_file:
             _ = self.generate_next_frame()  # throw away repeat first frame
 
-    def _communicate(self):
+    def _communicate(self):  # -no-cov-
         # this is primarily for debug purposes
         return self.proc.communicate()
 
