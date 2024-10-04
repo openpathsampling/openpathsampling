@@ -18,6 +18,9 @@ def callable_cv_from_dict(cls, dct):
     dct.update(kwargs)
     obj = cls(**dct)
     cv_callable = obj.cv_callable
+    if callable(cv_callable):
+        return obj
+
     try:
         cv_callable['_marshal'] = cv_callable['_marshal']['bytes']
     except:

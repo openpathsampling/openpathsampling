@@ -1,4 +1,4 @@
-short_version = '1.6.1'
+short_version = '1.7.0'
 version = short_version
 full_version = short_version
 git_revision = 'alpha'

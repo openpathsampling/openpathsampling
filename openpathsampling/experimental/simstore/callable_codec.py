@@ -2,7 +2,8 @@ import types
 import dis
 import dill
 import codecs
-from .serialization_helpers import has_uuid, do_import
+from .serialization_helpers import do_import
+from .uuids import has_uuid
 from openpathsampling.deprecations \
         import SIMSTORE_CALLABLE_CODEC_STRING_NOT_BYTES
 

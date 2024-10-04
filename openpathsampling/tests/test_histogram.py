@@ -5,6 +5,7 @@ from builtins import object
 from .test_helpers import assert_items_almost_equal, assert_items_equal
 import pytest
 import logging
+from numpy import testing as npt
 logging.getLogger('openpathsampling.initialization').setLevel(logging.CRITICAL)
 logging.getLogger('openpathsampling.ensemble').setLevel(logging.CRITICAL)
 logging.getLogger('openpathsampling.storage').setLevel(logging.CRITICAL)
@@ -211,6 +212,14 @@ class TestSparseHistogram(object):
         assert histo_fcn((0.61, 0.89)) == 1
         # empty voxel gives 0
         assert histo_fcn((2.00, 2.00)) == 0
+
+    @pytest.mark.parametrize('side,expected', [
+        ('l', [[0.0, -0.1], [0.0, 0.5], [0.5, 0.8]]),
+        ('r', [[0.5, 0.2], [0.5, 0.8], [1.0, 1.1]]),
+        ('m', [[0.25, 0.05], [0.25, 0.65], [0.75, 0.95]]),
+    ])
+    def test_xvals(self, side, expected):
+        npt.assert_almost_equal(self.histo.xvals(side), expected)
 
     def test_normalized(self):
         raw_prob_normed = self.histo.normalized(raw_probability=True)
