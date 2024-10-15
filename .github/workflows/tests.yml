@@ -44,11 +44,11 @@ jobs:
         with:
           fetch-depth: 2
       - uses: actions/setup-python@v2
-      - uses: conda-incubator/setup-miniconda@v2
+      - uses: conda-incubator/setup-miniconda@v3
         with: 
           auto-update-conda: true
           python-version: ${{ matrix.CONDA_PY }}
-          miniforge-variant: Mambaforge
+          miniforge-version: latest
       - name: "Install requirements"
         env:
           MINIMAL: ${{ matrix.MINIMAL }}
