@@ -58,6 +58,13 @@ class StorageHandlerTest:
         expected = {"nested/nest_prestored", "nested/deeply/prestored"}
         assert set(self.handler.list_directory("nested")) == expected
 
+    def test_contains(self):
+        assert "prestored" in self.handler
+        assert "nested/nest_prestored" in self.handler
+        assert "nested" not in self.handler
+        assert "nonexistent" not in self.handler
+
+
 class TestLocalFileStorageHandler(StorageHandlerTest):
     def _initialize_handler(self):
         root = self.tmpdir / "stored"
@@ -123,6 +130,10 @@ class TestLocalFileStorageHandler(StorageHandlerTest):
         with pytest.raises(ValueError, match="is a directory"):
             self.handler.transfer("directory", source_dir)
 
+    def test_list_directory_not_directory(self):
+        with pytest.raises(ValueError, match="is not a directory"):
+            self.handler.list_directory("prestored")
+
 
 class TestMemoryStorageHandler(StorageHandlerTest):
     def _initialize_handler(self):
@@ -171,3 +182,12 @@ class TestMemoryStorageHandler(StorageHandlerTest):
 
         with pytest.raises(ValueError, match="is a directory"):
             self.handler.transfer("directory", source_dir)
+
+    def test_list_root_directory(self):
+        expected = {
+            "prestored",
+            "nested/nest_prestored",
+            "nested/deeply/prestored"
+        }
+        root = pathlib.Path("")
+        assert set(self.handler.list_directory(root)) == expected
