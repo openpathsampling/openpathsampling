@@ -55,7 +55,7 @@ class StorageHandler(ABC):
         """Transfer a file to the storage label from the source path.
 
         In some cases, this can be made faster than store followed by
-        os.remove, so this method can be overridden. (Example: moving ona
+        os.remove, so this method can be overridden. (Example: moving on a
         file system is faster than copying.)
         """
         if pathlib.Path(source_path).is_dir():
