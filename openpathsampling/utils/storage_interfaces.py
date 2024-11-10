@@ -8,7 +8,7 @@ _logger = logging.getLogger(__name__)
 
 
 
-class StorageHandler(ABC):
+class StorageInterface(ABC):
     """Abstract treatment of a key-value-like file/object store.
 
     This is generally assuming file-based semantics. This may typically mean
@@ -71,13 +71,13 @@ class StorageHandler(ABC):
         raise NotImplementedError()
 
 
-class LocalFileStorageHandler(StorageHandler):
-    """Concrete implementation of StorageHandler for local files.
+class LocalFileStorageInterface(StorageInterface):
+    """Concrete implementation of StorageInterface for local files.
 
     Parameters
     ----------
     root : os.PathLike
-        The root directory for the storage handler.
+        The root directory for the storage interface.
     """
     def __init__(self, root):
         self.root = pathlib.Path(root)
@@ -125,8 +125,8 @@ class LocalFileStorageHandler(StorageHandler):
         ]
 
 
-class MemoryStorageHandler(StorageHandler):
-    """In-memory storage handler.
+class MemoryStorageInterface(StorageInterface):
+    """In-memory storage interface.
 
     Useful in testing.
     """
