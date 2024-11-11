@@ -102,7 +102,7 @@ class LocalFileStorageInterface(StorageInterface):
                              "deleted.")
         else:
             _logger.debug("Deleting file {str(obj)}")
-            os.remove(self.root / storage_label)
+            os.remove(obj)
 
     def __contains__(self, storage_label):
         expected = self.root / storage_label
