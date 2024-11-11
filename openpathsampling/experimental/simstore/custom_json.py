@@ -3,10 +3,12 @@ import functools
 import inspect
 from collections import namedtuple, defaultdict
 from .tools import none_to_default
-from .serialization_helpers import (
-    has_uuid, replace_uuid, encode_uuid, get_uuid, set_uuid
+from .uuids import (
+    has_uuid, encode_uuid, get_uuid, set_uuid
 )
-from .serialization_helpers import do_import, from_dict_with_uuids
+from .serialization_helpers import (
+    do_import, from_dict_with_uuids, replace_uuid
+)
 
 class SimulationObjectSerialization(object):
     def __init__(self, json_encoder, json_decoder):

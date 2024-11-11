@@ -271,7 +271,7 @@ class ExternalEngine(DynamicsEngine):
         if self.first_frame_in_file:
             _ = self.generate_next_frame()  # throw away repeat first frame
 
-    def _communicate(self):
+    def _communicate(self):  # -no-cov-
         # this is primarily for debug purposes
         return self.proc.communicate()
 
@@ -333,3 +333,31 @@ class ExternalEngine(DynamicsEngine):
     def engine_command(self):
         """Generates a string for the command to run the engine."""
         raise NotImplementedError()
+
+    def restart_at_step(self, step):
+        """Restart the filecounter (if used) to the right number."""
+        if not type(self.filename_setter) == FilenameSetter:
+            # Nothing to do
+            # TODO OPS 2.0: this can be turned into isinstance after
+            # inheritance is swapped
+            return
+        # Grab the last trajectory that was written to the storage
+        last_trajectory = step.simulation.storage.trajectories[-1]
+        # As this trajectory can be made from different files, querry all files
+        possible_last_trajs = set(frame.file_name for frame in last_trajectory)
+
+        # Split off extensions and directories,
+        # loop backwards untill we find a non-number, and cast to int
+        possible_numbers = []
+        numbers = '0123456789'
+        for traj in possible_last_trajs:
+            traj = traj.rsplit('.', 1)[0]  # split off extension
+            traj = traj.replace('\\', '/').split('/')[-1]  # split directories
+            string = ""
+            for c in traj[::-1]:
+                if c not in numbers:
+                    break
+                string += c
+            possible_numbers.append(int(string[::-1]))
+        last_number = max(possible_numbers)
+        self.filename_setter.count = last_number + 1
