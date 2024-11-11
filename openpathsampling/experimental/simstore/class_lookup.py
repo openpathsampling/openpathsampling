@@ -1,4 +1,5 @@
 from . import tools
+from .uuids import has_uuid
 
 class ClassIsSomething(object):
     """Method to test whether a class exhibits a given attribute.
@@ -41,3 +42,5 @@ def _is_iterable_method(obj):
 
 is_storage_iterable = ClassIsSomething(_is_iterable_method)
 is_storage_mappable = ClassIsSomething(tools.is_mappable)
+is_storage_string = ClassIsSomething(tools.is_string)
+has_storage_uuid = ClassIsSomething(has_uuid)

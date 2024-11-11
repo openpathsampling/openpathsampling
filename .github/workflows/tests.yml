@@ -44,11 +44,11 @@ jobs:
         with:
           fetch-depth: 2
       - uses: actions/setup-python@v2
-      - uses: conda-incubator/setup-miniconda@v2
+      - uses: conda-incubator/setup-miniconda@v3
         with: 
           auto-update-conda: true
           python-version: ${{ matrix.CONDA_PY }}
-          miniforge-variant: Mambaforge
+          miniforge-version: latest
       - name: "Install requirements"
         env:
           MINIMAL: ${{ matrix.MINIMAL }}
@@ -82,7 +82,9 @@ jobs:
       - name: "Tests: Experimental"
         if: matrix.MINIMAL == '' && matrix.CONDA_PY != '2.7'
         run: py.test openpathsampling/experimental/ -vv -s
-      - uses: codecov/codecov-action@v2
+      - uses: codecov/codecov-action@v4
+        env:
+          CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
       - name: "Notebook tests"
         if: matrix.MINIMAL == ''
         run: |

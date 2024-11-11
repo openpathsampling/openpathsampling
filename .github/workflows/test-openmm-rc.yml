@@ -29,7 +29,7 @@ jobs:
           # we'd rather use the default Python version, but for now need to
           # pin to 3.9 (see openpathsampling/openpathsampling#1093)
           #CONDA_PY=$(python -c "import sys; print('.'.join(str(s) for s in sys.version_info[:2]))")
-          export CONDA_PY=3.9
+          export CONDA_PY="3.11"
           echo "Python version: ${CONDA_PY}"
           source devtools/conda_install_reqs.sh
       - name: "Install OpenMM RC"

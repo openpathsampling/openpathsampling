@@ -61,7 +61,7 @@ For Users
     examples/index
     topics/index
     videos
-    cli
+    cli/index
     ecosystem
     faq
     getting_help
