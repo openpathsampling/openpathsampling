@@ -119,6 +119,11 @@ class CalvinistDynamics(DynamicsEngine):
     def current_snapshot(self, snap):
         self._current_snap = snap
 
+    def to_dict(self):
+        dct = super().to_dict()
+        dct['predestination'] = [s.xyz[0][0] for s in self.predestination]
+        return dct
+
     def generate_next_frame(self):
         # find the frame in self.predestination that matches this frame
         if self.frame_index is None:

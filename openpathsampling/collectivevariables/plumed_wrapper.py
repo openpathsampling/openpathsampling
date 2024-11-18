@@ -71,7 +71,7 @@ class PLUMEDCV(paths.collectivevariable.CoordinateFunctionCV):
         kwargs
         """
 
-        super(PLUMEDCV, self).__init__(
+        super().__init__(
                 name,
                 f=PLUMEDCV.compute_cv,
                 cv_requires_lists=cv_requires_lists,

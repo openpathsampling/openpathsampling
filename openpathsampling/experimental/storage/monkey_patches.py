@@ -60,23 +60,18 @@ _PREPATCH = {
     ]
 }
 
-_UNPATCH_MODULES = [
-    paths.netcdfplus,
-    paths.collectivevariable,
-    paths.collectivevariables,
-    paths
-]
-
 _IS_PATCHED_SAVING = False
 _IS_PATCHED_LOADING = False
 
-def monkey_patch_saving(paths):
+def monkey_patch_saving(paths, with_old_cvs=True):
     global _IS_PATCHED_SAVING
     if _IS_PATCHED_SAVING:
         return paths
 
-    paths.netcdfplus.FunctionPseudoAttribute.to_dict = \
-            function_pseudo_attribute_to_dict
+    if with_old_cvs:
+        paths.netcdfplus.FunctionPseudoAttribute.to_dict = \
+                function_pseudo_attribute_to_dict
+
     paths.TPSNetwork.to_dict = tuple_keys_to_dict(
         paths.TPSNetwork.to_dict, 'transitions'
     )
@@ -86,18 +81,20 @@ def monkey_patch_saving(paths):
     _IS_PATCHED_SAVING = True
     return paths
 
-def monkey_patch_loading(paths):
+def monkey_patch_loading(paths, with_old_cvs=True):
     global _IS_PATCHED_LOADING
     if _IS_PATCHED_LOADING:
         return paths
 
-    paths.CallableCV.from_dict = classmethod(callable_cv_from_dict)
-    paths.netcdfplus.FunctionPseudoAttribute.from_dict = \
-            classmethod(from_dict_attr_to_class(
-                paths.netcdfplus.FunctionPseudoAttribute.from_dict,
-                attr_name='key_class'
-            ))
-            # classmethod(function_pseudo_attribute_from_dict)
+    if with_old_cvs:
+        paths.CallableCV.from_dict = classmethod(callable_cv_from_dict)
+        paths.netcdfplus.FunctionPseudoAttribute.from_dict = \
+                classmethod(from_dict_attr_to_class(
+                    paths.netcdfplus.FunctionPseudoAttribute.from_dict,
+                    attr_name='key_class'
+                ))
+                # classmethod(function_pseudo_attribute_from_dict)
+
     paths.TPSNetwork.from_dict = classmethod(tuple_keys_from_dict(
         paths.TPSNetwork.from_dict, 'transitions'
     ))
@@ -107,24 +104,39 @@ def monkey_patch_loading(paths):
     _IS_PATCHED_LOADING = True
     return paths
 
-def monkey_patch_all(paths):
-    paths = monkey_patch_saving(paths)
-    paths = monkey_patch_loading(paths)
+def monkey_patch_all(paths, with_old_cvs=True):
+    paths = monkey_patch_saving(paths, with_old_cvs)
+    paths = monkey_patch_loading(paths, with_old_cvs)
     return paths
 
-def unpatch(paths):
+def unpatch(paths, with_old_cvs=True):
+    global _IS_PATCHED_SAVING
+    global _IS_PATCHED_LOADING
+    if not (_IS_PATCHED_LOADING or _IS_PATCHED_SAVING):
+        return paths
+
+    old_cv_modules = [
+        paths.collectivevariable,
+        paths.collectivevariables,
+    ]
+    unpatch_modules = (
+        [paths.netcdfplus]
+        + (old_cv_modules if with_old_cvs else [])
+        + [paths]
+    )
+
     for cls, old in _PREPATCH.items():
-        cls.to_dict = old['to']
-        cls.from_dict = old['from']
+        if cls.to_dict != old['to']:
+            cls.to_dict = old['to']
+        if cls.from_dict != old['from']:
+            cls.from_dict = old['from']
 
     # we loop over the modules twice as quick-and-dirty solution to avoid
     # figuring the DAG topological order for imports (should actually in
     # order leaf to root)
-    for module in _UNPATCH_MODULES * 2:
+    for module in unpatch_modules * 2:
         importlib.reload(module)
 
-    global _IS_PATCHED_SAVING
-    global _IS_PATCHED_LOADING
     _IS_PATCHED_SAVING = False
     _IS_PATCHED_LOADING = False
     return paths
