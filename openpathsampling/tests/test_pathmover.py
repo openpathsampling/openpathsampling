@@ -25,7 +25,7 @@ from openpathsampling.shooting import UniformSelector
 from openpathsampling.volume import CVDefinedVolume
 import openpathsampling.engines.toy as toys
 from openpathsampling.checkpointing import Checkpointer
-from openpathsampling.utils.storage_handlers import MemoryStorageHandler
+from openpathsampling.utils.storage_interfaces import MemoryStorageInterface
 from .test_helpers import (assert_equal_array_array, items_equal,
                            make_1d_traj, CalvinistDynamics, CallIdentity,
                            assert_same_items, A2BEnsemble)

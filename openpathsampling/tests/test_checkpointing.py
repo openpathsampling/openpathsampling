@@ -1,4 +1,4 @@
-from openpathsampling.utils.storage_handlers import MemoryStorageHandler
+from openpathsampling.utils.storage_interfaces import MemoryStorageInterface
 from openpathsampling.checkpointing import *
 
 import openpathsampling as paths
