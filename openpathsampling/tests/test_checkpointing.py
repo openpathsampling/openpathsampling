@@ -52,7 +52,7 @@ class CheckpointBreak(Exception):
 
 class TestCheckpointer:
     def setup_method(self):
-        storage_handler = MemoryStorageHandler()
+        storage_handler = MemoryStorageInterface()
         self.checkpoint = Checkpointer(storage_handler)
 
     def teardown_method(self):
@@ -120,7 +120,7 @@ class TestCheckpointer:
         assert set(store._data) == set()
 
     def test_context_manager_with_parent_keeps_checkpoints(self):
-        store = MemoryStorageHandler()
+        store = MemoryStorageInterface()
         checkpoint = Checkpointer(store, parent="foo")
         with checkpoint as cpt:
             # TODO: patch test that the temporary directory existed
@@ -217,7 +217,7 @@ class CheckpointLifecycleHarness:
 
     @staticmethod
     def _setup_storage():
-        return MemoryStorageHandler()
+        return MemoryStorageInterface()
 
     def test_checkpoint_lifecycle(self, tmp_path):
         self.checkpoint_lifecycle(tmp_path)
@@ -428,7 +428,7 @@ class TestRecoveryLifecycle(CheckpointLifecycleHarness):
     """
     @staticmethod
     def _setup_storage():
-        store = MemoryStorageHandler()
+        store = MemoryStorageInterface()
 
         with tempfile.TemporaryDirectory() as tmpdir:
             td = pathlib.Path(tmpdir)

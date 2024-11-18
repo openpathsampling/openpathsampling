@@ -149,8 +149,9 @@ class MemoryStorageInterface(StorageInterface):
         return storage_label in self._data
 
     def list_directory(self, storage_label):
+        storage_label = str(storage_label)
         # special case because the empty path becomes '.' as a string
-        if storage_label == pathlib.Path(""):
+        if storage_label == '.':
             storage_label = ""
         elif not storage_label.endswith("/"):
             storage_label += "/"

@@ -131,7 +131,7 @@ class CheckpointTest:
     def checkpointed_move_test(self, input_sample_set):
         # this is a full test of a move that is checkpointed, where the
         # first run fails and then it picks up from the checkpointed data
-        checkpointer = Checkpointer(MemoryStorageHandler())
+        checkpointer = Checkpointer(MemoryStorageInterface())
         # test with checkpoint break (test that when the move fails, the
         # checkpoint includes relevant information)
         change = self.run_incomplete(input_sample_set, checkpointer)
