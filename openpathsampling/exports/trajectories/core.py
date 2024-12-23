@@ -47,7 +47,7 @@ class SimStoreTrajectoryWriter(TrajectoryWriter):
     def _write(self, trajectory, filename):
         # TODO: maybe error if not monkey-patched?
         from openpathsampling.experimental.storage import Storage
-        from openpathsampling.experimental.storage.monkey_patch import (
+        from openpathsampling.experimental.storage.monkey_patches import (
             _IS_PATCHED_SAVING
         )
         if not _IS_PATCHED_SAVING:

@@ -321,6 +321,31 @@ class DynamicsEngine(StorableNamedObject):
         import openpathsampling as p
         p.EngineMover.engine = self
 
+    def _default_trajectory_writer(self):
+        """Subclasses should override this to provide a default writer
+        suitable for their engine.
+
+        By default, we use the :class:`.SimStoreTrajectoryWriter`, because
+        it should be able to handle any OPS objects.
+        """
+        return SimStoreTrajectoryWriter()
+
+    def export_trajectory(self, trajectory, filename, *, writer=None,
+                          force=False):
+        """Export a trajectory to a file
+
+        Parameters
+        ----------
+        trajectory : :class:`.Trajectory`
+            the trajectory to export
+        filename : str
+            the name of the file to which to export the trajectory
+        """
+        if writer is None:
+            writer = self._default_trajectory_writer()
+
+        writer.write(trajectory, filename, force=force)
+
     @property
     def default_options(self):
         default_options = {}
