@@ -102,16 +102,31 @@ class TestSimStoreTrajectoryWriter(TrajectoryWriterTestBase):
         from openpathsampling.experimental.storage import monkey_patches
         paths = monkey_patches.monkey_patch_all(paths)
 
-        outfile = tmp_path / f"{trajectory_fixture}.nc"
-        self._test_trajectory(trajectory, outfile)
-
-        # undo the monkey patch
-        monkey_patches.unpatch(paths)
+        try:
+            outfile = tmp_path / f"{trajectory_fixture}.nc"
+            self._test_trajectory(trajectory, outfile)
+        finally:
+            # undo the monkey patch
+            monkey_patches.unpatch(paths)
 
     def test_call_outfile_exists(self, request, tmp_path):
         trajectory = request.getfixturevalue("ad_trajectory")
-        self._test_call_outfile_exists(trajectory, tmp_path / "test.db")
+        import openpathsampling as paths
+        from openpathsampling.experimental.storage import monkey_patches
+        paths = monkey_patches.monkey_patch_all(paths)
+
+        try:
+            self._test_call_outfile_exists(trajectory, tmp_path / "test.db")
+        finally:
+            monkey_patches.unpatch(paths)
 
     def test_call_outfile_exists_force(self, request, tmp_path):
         trajectory = request.getfixturevalue("ad_trajectory")
-        self._test_call_outfile_exists_force(trajectory, tmp_path / "test.db")
+        import openpathsampling as paths
+        from openpathsampling.experimental.storage import monkey_patches
+        paths = monkey_patches.monkey_patch_all(paths)
+        try:
+            self._test_call_outfile_exists_force(trajectory,
+                                                 tmp_path / "test.db")
+        finally:
+            monkey_patches.unpatch(paths)
