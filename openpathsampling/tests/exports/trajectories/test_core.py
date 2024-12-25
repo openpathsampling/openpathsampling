@@ -130,3 +130,8 @@ class TestSimStoreTrajectoryWriter(TrajectoryWriterTestBase):
                                                  tmp_path / "test.db")
         finally:
             monkey_patches.unpatch(paths)
+
+    def test_call_not_patched_fail(self, request, tmp_path):
+        trajectory = request.getfixturevalue("ad_trajectory")
+        with pytest.raises(RuntimeError, match="monkey-patch"):
+            self.writer(trajectory, tmp_path / "test.db")
