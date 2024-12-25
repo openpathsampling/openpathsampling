@@ -107,3 +107,97 @@ class TestDynamicsEngine(object):
         # doesn't work
         traj = self.stupid.generate(init_snap, conditions)
         assert len(traj) == 2
+
+    def test_export_trajectory(self, tmp_path):
+        global paths
+        outfile = tmp_path / "test_traj.db"
+        init_snap = make_1d_traj([0.0])[0]
+        continue_condition = paths.LengthEnsemble(5).can_append
+        traj = self.stupid.generate(init_snap, [continue_condition])
+        assert len(traj) == 5
+        assert not outfile.exists()
+        from openpathsampling.experimental.storage import (
+            monkey_patches, Storage
+        )
+        paths = monkey_patches.monkey_patch_all(paths)
+        try:
+            self.stupid.export_trajectory(traj, outfile)
+            assert outfile.exists()
+            storage = Storage(outfile, mode='r')
+            assert len(storage.trajectories) == 1
+            reloaded = storage.trajectories[0]
+            assert len(reloaded) == 5
+            assert reloaded == traj
+        finally:
+            monkey_patches.unpatch(paths)
+
+
+    def test_export_trajectory_force(self, tmp_path):
+        global paths
+        outfile = tmp_path / "test_traj.db"
+        outfile.touch()
+        init_snap = make_1d_traj([0.0])[0]
+        continue_condition = paths.LengthEnsemble(5).can_append
+        traj = self.stupid.generate(init_snap, [continue_condition])
+        assert len(traj) == 5
+        assert outfile.exists()
+        from openpathsampling.experimental.storage import (
+            monkey_patches, Storage
+        )
+        paths = monkey_patches.monkey_patch_all(paths)
+
+        try:
+            self.stupid.export_trajectory(traj, outfile, force=True)
+            assert outfile.exists()
+            storage = Storage(outfile, mode='r')
+            assert len(storage.trajectories) == 1
+            reloaded = storage.trajectories[0]
+            assert len(reloaded) == 5
+            assert reloaded == traj
+        finally:
+            monkey_patches.unpatch(paths)
+
+    def test_export_trajecory_file_exists_fail(self, tmp_path):
+        global paths
+        outfile = tmp_path / "test_traj.db"
+        outfile.touch()
+        init_snap = make_1d_traj([0.0])[0]
+        continue_condition = paths.LengthEnsemble(5).can_append
+        traj = self.stupid.generate(init_snap, [continue_condition])
+        assert len(traj) == 5
+        assert outfile.exists()
+        from openpathsampling.experimental.storage import (
+            monkey_patches, Storage
+        )
+        paths = monkey_patches.monkey_patch_all(paths)
+
+        try:
+            with pytest.raises(FileExistsError):
+                self.stupid.export_trajectory(traj, outfile)
+        finally:
+            monkey_patches.unpatch(paths)
+
+    def test_export_trajectory_custom_writer(self, tmp_path):
+        # here we use a custom writer that will write to a string
+        from openpathsampling.exports.trajectories.core import (
+            TrajectoryWriter
+        )
+        outfile = tmp_path / "test_traj.txt"
+        class StringXWriter(TrajectoryWriter):
+            def _write(self, trajectory, filename):
+                outstring = " ".join([
+                    f"{snap.xyz[0][0]:.2f}" for snap in trajectory
+                ])
+                with open(filename, 'w') as f:
+                    f.write(outstring)
+
+        init_snap = make_1d_traj([0.0])[0]
+        continue_condition = paths.LengthEnsemble(5).can_append
+        traj = self.stupid.generate(init_snap, [continue_condition])
+        assert len(traj) == 5
+        writer = StringXWriter()
+        self.stupid.export_trajectory(traj, outfile, writer=writer)
+        with open(outfile, 'r') as f:
+            outstring = f.read()
+
+        assert outstring == ("0.00 " * 5)[:-1]

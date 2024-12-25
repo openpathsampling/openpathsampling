@@ -10,6 +10,7 @@ import sys
 
 from openpathsampling.netcdfplus import StorableNamedObject
 from openpathsampling.integration_tools import is_simtk_unit_type
+from openpathsampling.exports.trajectories import SimStoreTrajectoryWriter
 
 from .snapshot import BaseSnapshot
 from .trajectory import Trajectory
@@ -344,7 +345,7 @@ class DynamicsEngine(StorableNamedObject):
         if writer is None:
             writer = self._default_trajectory_writer()
 
-        writer.write(trajectory, filename, force=force)
+        writer(trajectory, filename, force=force)
 
     @property
     def default_options(self):
