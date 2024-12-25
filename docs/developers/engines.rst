@@ -29,4 +29,5 @@ implement engines that do not only deal with standard molecular dynamics.
     snapshot_features
     engines_direct_api
     engines_indirect_api
+    engines_trajectory_export
     advanced_engines

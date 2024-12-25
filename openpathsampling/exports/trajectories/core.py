@@ -45,7 +45,6 @@ class SimStoreTrajectoryWriter(TrajectoryWriter):
     to use it.
     """
     def _write(self, trajectory, filename):
-        # TODO: maybe error if not monkey-patched?
         from openpathsampling.experimental.storage import Storage
         from openpathsampling.experimental.storage.monkey_patches import (
             _IS_PATCHED_SAVING
