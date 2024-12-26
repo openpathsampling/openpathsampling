@@ -1,7 +1,6 @@
 import pathlib
 import contextlib
 import logging
-from openpathsampling.integration_tools import HAS_MDTRAJ
 
 import numpy as np
 
