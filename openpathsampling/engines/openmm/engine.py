@@ -5,6 +5,7 @@ from openpathsampling.integration_tools import unit as u
 
 from openpathsampling.engines import DynamicsEngine, SnapshotDescriptor
 from openpathsampling.engines.openmm import tools
+from openpathsampling.exports.trajectories import TRRTrajectoryWriter
 from .snapshot import Snapshot
 import numpy as np
 
@@ -256,6 +257,9 @@ class OpenMMEngine(DynamicsEngine):
         if self._simulation is not None:
             del self._simulation.context
             self._simulation = None
+
+    def _default_trajectory_writer(self):
+        return TRRTrajectoryWriter()
 
     def initialize(self, platform=None):
         """

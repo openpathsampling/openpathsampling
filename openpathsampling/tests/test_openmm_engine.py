@@ -20,6 +20,8 @@ else:
 import openpathsampling.engines.openmm as peng
 import openpathsampling.engines as dyn
 
+import numpy.testing as npt
+
 import openpathsampling as paths
 
 from .test_helpers import (
@@ -277,3 +279,20 @@ class TestOpenMMEngine(object):
             integrator=omt.integrators.VVVRIntegrator()
         )
         assert engine.has_constraints() == has_constraints
+
+    def test_export_trajectory(self, tmp_path):
+        filename = tmp_path / "test.trr"
+        assert not filename.exists()
+        traj = self.engine.generate(self.engine.current_snapshot, [
+            paths.LengthEnsemble(3).can_append
+        ])
+        self.engine.export_trajectory(traj, filename)
+        assert filename.exists()
+
+        # reload the trajectory with MDTraj; check positions only
+        import mdtraj as md
+        topfile = data_filename("ala_small_traj.pdb")
+        reloaded = md.load(str(filename), top=str(topfile))
+        assert len(reloaded) == len(traj)
+        npt.assert_allclose(reloaded.xyz, traj.xyz)
+
