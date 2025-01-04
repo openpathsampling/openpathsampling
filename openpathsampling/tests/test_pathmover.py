@@ -14,7 +14,6 @@ import numpy as np
 import pytest
 
 import openpathsampling as paths
-from openpathsampling.collectivevariable import FunctionCV
 from openpathsampling.engines.trajectory import Trajectory
 from openpathsampling.ensemble import LengthEnsemble
 from openpathsampling.pathmover import *
@@ -128,7 +127,7 @@ class TestShootingMover(object):
     def setup_method(self):
         self.dyn = CalvinistDynamics([-0.1, 0.1, 0.3, 0.5, 0.7,
                                       -0.1, 0.2, 0.4, 0.6, 0.8])
-        op = FunctionCV("myid", f=lambda snap: snap.coordinates[0][0])
+        op = paths.FunctionCV("myid", f=lambda snap: snap.coordinates[0][0])
         self.stateA = CVDefinedVolume(op, -100, 0.0)
         self.stateB = CVDefinedVolume(op, 0.65, 100)
         self.tps = A2BEnsemble(self.stateA, self.stateB)
@@ -509,7 +508,7 @@ class TestTwoWayShootingMover(TestShootingMover):
 
 class TestPathReversalMover(object):
     def setup_method(self):
-        op = FunctionCV("myid", f=lambda snap: snap.coordinates[0][0])
+        op = paths.FunctionCV("myid", f=lambda snap: snap.coordinates[0][0])
 
         volA = CVDefinedVolume(op, -100, 0.0)
         volB = CVDefinedVolume(op, 1.0, 100)
@@ -576,7 +575,7 @@ class TestReplicaIDChangeMover(object):
 
 class TestReplicaExchangeMover(object):
     def setup_method(self):
-        op = FunctionCV("myid", f=lambda snap: snap.coordinates[0][0])
+        op = paths.FunctionCV("myid", f=lambda snap: snap.coordinates[0][0])
 
         state1 = CVDefinedVolume(op, -100, 0.0)
         state2 = CVDefinedVolume(op, 1, 100)
@@ -724,7 +723,7 @@ class TestRandomAllowedChoiceMover(object):
                                       ])
         self.dyn.initialized = True
         # SampleMover.engine = self.dyn
-        op = FunctionCV("myid", f=lambda snap: snap.coordinates[0][0])
+        op = paths.FunctionCV("myid", f=lambda snap: snap.coordinates[0][0])
         stateA = CVDefinedVolume(op, -100, 0.0)
         stateB = CVDefinedVolume(op, 0.65, 100)
         volX = CVDefinedVolume(op, -100, 0.25)
@@ -1176,7 +1175,7 @@ class TestFinalSubtrajectorySelectMover(SubtrajectorySelectTester):
 
 class TestMinusMover(object):
     def setup_method(self):
-        op = FunctionCV("myid", f=lambda snap: snap.coordinates[0][0])
+        op = paths.FunctionCV("myid", f=lambda snap: snap.coordinates[0][0])
         volA = CVDefinedVolume(op, -100, 0.0)
         volB = CVDefinedVolume(op, 1.0, 100)
         volX = CVDefinedVolume(op, -100, 0.25)
@@ -1410,7 +1409,7 @@ class TestMinusMover(object):
 
 class TestSingleReplicaMinusMover(object):
     def setup_method(self):
-        op = FunctionCV("myid", f=lambda snap: snap.coordinates[0][0])
+        op = paths.FunctionCV("myid", f=lambda snap: snap.coordinates[0][0])
         volA = CVDefinedVolume(op, -100, 0.0)
         volB = CVDefinedVolume(op, 1.0, 100)
         volX = CVDefinedVolume(op, -100, 0.25)

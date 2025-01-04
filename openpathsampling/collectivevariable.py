@@ -57,7 +57,7 @@ class CollectiveVariable(PseudoAttribute):
             name,
             cv_time_reversible=False
     ):
-        super(CollectiveVariable, self).__init__(name, paths.BaseSnapshot)
+        super().__init__(name, paths.BaseSnapshot)
 
         self.cv_time_reversible = cv_time_reversible
         self.diskcache_allow_incomplete = not self.cv_time_reversible
@@ -207,7 +207,7 @@ class CallableCV(CollectiveVariable):
         ``mdtraj``
         """
 
-        super(CallableCV, self).__init__(
+        super().__init__(
             name,
             cv_time_reversible=cv_time_reversible
         )
@@ -323,7 +323,7 @@ class FunctionCV(CallableCV):
 
         """
 
-        super(FunctionCV, self).__init__(
+        super().__init__(
             name,
             cv_callable=f,
             cv_time_reversible=cv_time_reversible,
@@ -374,10 +374,11 @@ class CoordinateFunctionCV(FunctionCV):
         :class:`openpathsampling.collectivevariable.CallableCV`
 
         """
-
-        super(FunctionCV, self).__init__(
+        # not sure why this used to skip the parent init; all it does is
+        # rename anyway
+        super().__init__(
             name,
-            cv_callable=f,
+            f=f,
             cv_time_reversible=True,
             cv_requires_lists=cv_requires_lists,
             cv_wrap_numpy_array=cv_wrap_numpy_array,

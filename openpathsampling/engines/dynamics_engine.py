@@ -10,6 +10,7 @@ import sys
 
 from openpathsampling.netcdfplus import StorableNamedObject
 from openpathsampling.integration_tools import is_simtk_unit_type
+from openpathsampling.exports.trajectories import SimStoreTrajectoryWriter
 
 from .snapshot import BaseSnapshot
 from .trajectory import Trajectory
@@ -320,6 +321,31 @@ class DynamicsEngine(StorableNamedObject):
     def set_as_default(self):
         import openpathsampling as p
         p.EngineMover.engine = self
+
+    def _default_trajectory_writer(self):
+        """Subclasses should override this to provide a default writer
+        suitable for their engine.
+
+        By default, we use the :class:`.SimStoreTrajectoryWriter`, because
+        it should be able to handle any OPS objects.
+        """
+        return SimStoreTrajectoryWriter()
+
+    def export_trajectory(self, trajectory, filename, *, writer=None,
+                          force=False):
+        """Export a trajectory to a file
+
+        Parameters
+        ----------
+        trajectory : :class:`.Trajectory`
+            the trajectory to export
+        filename : str
+            the name of the file to which to export the trajectory
+        """
+        if writer is None:
+            writer = self._default_trajectory_writer()
+
+        writer(trajectory, filename, force=force)
 
     @property
     def default_options(self):
