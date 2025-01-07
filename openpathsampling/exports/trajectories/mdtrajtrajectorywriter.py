@@ -14,22 +14,23 @@ class MDTrajTrajectoryWriter(TrajectoryWriter):
             raise ImportError("MDTraj is not available")
 
         self.mdtraj_selection = mdtraj_selection
+        self._sel = None  # the actual atom indices of selection
 
     def _write(self, trajectory, filename):
         mdt = trajectory.to_mdtraj()
 
-        sel = None
-        if isinstance(self.mdtraj_selection, str):
-            sel = mdt.topology.select(self.mdtraj_selection)
-        elif isinstance(self.mdtraj_selection, Iterable):
-            sel = list(self.mdtraj_selection)
-        elif self.mdtraj_selection is None:
-            pass
-        else:
-            raise TypeError("mdtraj_selection must be a string or an "
-                            f"iterable; got '{self.mdtraj_selection}'")
+        if self._sel is None:
+            if self.mdtraj_selection is None:
+                pass
+            elif isinstance(self.mdtraj_selection, str):
+                self._sel = mdt.topology.select(self.mdtraj_selection)
+            elif isinstance(self.mdtraj_selection, Iterable):
+                self._sel = list(self.mdtraj_selection)
+            else:
+                raise TypeError("mdtraj_selection must be a string or an "
+                                f"iterable; got '{self.mdtraj_selection}'")
 
-        if sel is not None:
-            mdt = mdt.atom_slice(sel)
+        if self._sel is not None:
+            mdt = mdt.atom_slice(self._sel)
 
         mdt.save(filename)
