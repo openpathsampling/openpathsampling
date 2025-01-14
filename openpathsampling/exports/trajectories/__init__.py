@@ -1,1 +1,3 @@
 from .core import TrajectoryWriter, SimStoreTrajectoryWriter
+from .trrtrajectorywriter import TRRTrajectoryWriter
+from .mdtrajtrajectorywriter import MDTrajTrajectoryWriter

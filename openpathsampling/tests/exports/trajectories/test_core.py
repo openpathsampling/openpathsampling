@@ -10,38 +10,6 @@ import pathlib
 
 
 @pytest.fixture
-def _ad_gmx_engine():
-    engine = paths.engines.gromacs.Engine(
-        gro="conf.gro",
-        mdp="md.mdp",
-        top="topol.top",
-        options = {
-            'mdrun_args': '-nt 1',
-            'grompp_args': '-maxwarn 2',
-        },
-        base_dir=data_filename("gromacs_engine"),
-        prefix="project"
-    )
-    return engine
-
-
-@pytest.fixture
-def ad_trajpath():
-    test_dir = pathlib.Path(data_filename("gromacs_engine"))
-    trajfile = test_dir / "project_trr/0000000.trr"
-    return trajfile
-
-
-@pytest.fixture
-def ad_trajectory(ad_trajpath, _ad_gmx_engine):
-    traj = paths.Trajectory([
-        _ad_gmx_engine.read_frame_from_file(str(ad_trajpath), i)
-        for i in [0, 1, 2]
-    ])
-    return traj
-
-
-@pytest.fixture
 def toy_trajectory():
     return make_1d_traj([1.0, 2.0, 3.0])
 
