@@ -98,11 +98,11 @@ class LoaderProxy(object):
             if type(self.__uuid__) is int:
                 raise RuntimeWarning(
                     'Index %s is not in store. This should never happen!' %
-                    self._idx)
+                    self.__uuid__)
             else:
                 raise RuntimeWarning(
                     'Object %s is not in store. Attach it using fallbacks.' %
-                    self._idx)
+                    self.__uuid__)
 
 
 class DelayedLoader(object):
@@ -114,7 +114,7 @@ class DelayedLoader(object):
     def __get__(self, instance, owner):
         if instance is not None:
             obj = instance._lazy[self]
-            if hasattr(obj, '_idx'):
+            if isinstance(obj, LoaderProxy):
                 return obj.__subject__
             else:
                 return obj
