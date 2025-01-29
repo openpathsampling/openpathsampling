@@ -71,7 +71,7 @@ class PLUMEDCV(paths.collectivevariable.CoordinateFunctionCV):
         kwargs
         """
 
-        super(PLUMEDCV, self).__init__(
+        super().__init__(
                 name,
                 f=PLUMEDCV.compute_cv,
                 cv_requires_lists=cv_requires_lists,
@@ -184,6 +184,11 @@ class PLUMEDCV(paths.collectivevariable.CoordinateFunctionCV):
             'cv_wrap_numpy_array': self.cv_wrap_numpy_array,
             'cv_scalarize_numpy_singletons': self.cv_scalarize_numpy_singletons
         }
+
+    @classmethod
+    def from_dict(cls, dct):
+        return cls(**dct)
+
 
 
 class PLUMEDInterface(StorableNamedObject):

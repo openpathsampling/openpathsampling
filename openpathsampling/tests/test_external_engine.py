@@ -138,6 +138,7 @@ class TestExternalEngine(object):
         self.ensemble = paths.LengthEnsemble(5)
 
     def test_deprecation(self):
+        NEW_DEFAULT_FILENAME_SETTER.has_warned = False
         slow_options = {'n_frames_max': 10000,
                         'engine_sleep': 100,
                         'name_prefix': "test",

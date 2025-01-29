@@ -20,6 +20,7 @@ from openpathsampling.engines.topology import MDTrajTopology
 from openpathsampling.engines.external_snapshots import \
         ExternalMDSnapshot, InternalizedMDSnapshot
 from openpathsampling.tools import ensure_file
+from openpathsampling.exports.trajectories import TRRTrajectoryWriter
 
 import os
 import psutil
@@ -185,6 +186,9 @@ class GromacsEngine(ExternalEngine):
 
         super(GromacsEngine, self).__init__(options, descriptor, template,
                                              first_frame_in_file=True)
+
+    def _default_trajectory_writer(self):
+        return TRRTrajectoryWriter()
 
     def to_dict(self):
         dct = super(GromacsEngine, self).to_dict()

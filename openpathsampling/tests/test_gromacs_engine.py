@@ -318,6 +318,29 @@ class TestGromacsEngine(object):
         reserialized = deserialized.to_dict()
         assert serialized == reserialized
 
+    def test_export_trajectory(self, tmp_path):
+        if not has_gmx:
+            pytest.skip("gmx not found. Skipping test.")
+
+        if not HAS_MDTRAJ:
+            pytest.skip("MDTraj not found. Skipping test.")
+
+        traj_0 = self.engine.trajectory_filename(0)
+        snap = self.engine.read_frame_from_file(traj_0, 0)
+        self.engine.filename_setter.reset(0)
+
+        ens = paths.LengthEnsemble(5)
+        traj = self.engine.generate(snap, running=[ens.can_append])
+
+        filename = tmp_path / "test.trr"
+        assert not filename.exists()
+        self.engine.export_trajectory(traj, filename)
+        assert filename.exists()
+
+        traj_md = md.load(str(filename), top=self.engine.gro)
+        assert len(traj_md) == 5
+        npt.assert_allclose(traj_md.xyz, traj.xyz)
+
 
 class TestGromacsExternalMDSnapshot(object):
     def setup_method(self):
