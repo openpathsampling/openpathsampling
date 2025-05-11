@@ -68,7 +68,9 @@ jobs:
             python -m pip install --no-deps -e .
           fi
       - name: "Working directory"
-        run: pwd
+        run: |
+          pwd
+          ls -l
       - name: "Check installation"
         run: |
           python -c "import openpathsampling; print(openpathsampling.version.full_version)"
