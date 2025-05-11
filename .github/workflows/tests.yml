@@ -57,16 +57,15 @@ jobs:
           if [ -z "$MINIMAL" ] ; then
             source devtools/conda_install_reqs.sh
           else
-            # if we are in minimal mode, we do the full installation here
+            # In this case we're actually double-installing (not just
+            # installing requirements here). We prefer this to using the
+            # conda_install_reqs script so we can test deps coming from PyPI
             python -m pip install -e .[test]
           fi
           python -m pip install autorelease
       - name: "Install"
         run: |
-          if [ -n "$MINIMAL" ] ; then
-            # if we are not in minimal mode, we install the package here
-            python -m pip install --no-deps -e .
-          fi
+          python -m pip install --no-deps -e .
       - name: "Working directory"
         run: |
           pwd
