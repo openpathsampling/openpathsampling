@@ -72,7 +72,7 @@ jobs:
       - name: "Versions"
         run: conda list
       - name: "Autorelease check"
-        run: python devtools/autorelease_check.py
+        run: autorelease check
       #- name: "DEBUG: enable SSH login"
         #uses: mxschmitt/action-tmate@v3
       - name: "Unit Tests"
