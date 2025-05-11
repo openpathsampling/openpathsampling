@@ -1,0 +1,48 @@
+project:
+  repo_owner: openpathsampling
+  repo_name: openpathsampling
+  project_name: OpenPathSampling
+
+repo:
+  release-branches:
+    - stable
+  release-tag: "v{BASE_VERSION}"
+  # TODO: this format will not work long-term: need a dev branch per release
+  # branch
+  dev-branch: master
+
+release-check:
+  versions:
+    - setup-cfg
+    - getattr: openpathsampling.version.version
+    - getattr: openpathsampling.netcdfplus.version.version
+
+notes:
+  labels:
+    - label: feature
+      heading: New features
+    - label: enhancement
+      heading: Other enhancements
+    - label: experimental
+      heading: Experimental (beta) features
+    - label: bugfix
+      heading: Bugs fixed
+    - label: misc PR
+      heading: Miscellaneous improvements
+      topics:
+        - label: docs
+          name: Improvements to documentation
+        - label: code-style
+          name: Improvements to code readability and style
+        - label: internal
+          name: Behind-the-scenes improvements to CI, testing, and deployment
+
+  allow-duplicates:
+    - label: experimental
+      show-as:
+        - experimental
+
+  standard_contributors:
+    - dwhswenson
+    - jhprinz
+    - sroet
