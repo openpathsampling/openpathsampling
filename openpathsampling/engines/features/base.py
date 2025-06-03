@@ -51,8 +51,8 @@ def _register_function(cls, name, code, __features__):
     try:
         source_code = '\n'.join(code)
         cc = compile(source_code, '<string>', 'exec')
-        #exec cc in locals()
-        exec_(cc, locals())
+        namespace = {'np': np, 'cls': cls}
+        exec_(cc, namespace)
 
         if name not in cls.__dict__:
             if hasattr(cls, '__features__') and cls.__features__.debug[name] is None:
@@ -61,7 +61,7 @@ def _register_function(cls, name, code, __features__):
                     'function is overridden again, otherwise some features might not be copied. '
                     'The general practise of overriding is not recommended.') % name)
 
-            setattr(cls, name, locals()[name])
+            setattr(cls, name, namespace[name])
 
             __features__['debug'][name] = source_code
 
