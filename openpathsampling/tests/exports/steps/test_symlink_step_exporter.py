@@ -156,7 +156,9 @@ class TestSymLinkStepExporter:
         step = shooting_step
         sample = step.change.trials[0]
 
-        exporter = SymLinkStepExporter(ext="db", base_dir=tmp_path, writer=self.mock_writer)
+        exporter = SymLinkStepExporter(
+            ext="db", base_dir=tmp_path, writer=self.mock_writer
+        )
         assert tmp_path.exists()
         assert tmp_path.is_dir()
         assert len(list(tmp_path.iterdir())) == 0
@@ -184,7 +186,9 @@ class TestSymLinkStepExporter:
         step = shooting_step
         sample = step.active[0]
 
-        exporter = SymLinkStepExporter(ext="db", base_dir=tmp_path, writer=self.mock_writer)
+        exporter = SymLinkStepExporter(
+            ext="db", base_dir=tmp_path, writer=self.mock_writer
+        )
 
         original_cwd = os.getcwd()
         os.chdir(tmp_path)
@@ -209,7 +213,9 @@ class TestSymLinkStepExporter:
         step = shooting_step
         sample = step.active[0]
 
-        exporter = SymLinkStepExporter(ext="db", base_dir=tmp_path, writer=self.mock_writer)
+        exporter = SymLinkStepExporter(
+            ext="db", base_dir=tmp_path, writer=self.mock_writer
+        )
 
         original_cwd = os.getcwd()
         os.chdir(tmp_path)
@@ -245,42 +251,50 @@ class TestSymLinkStepExporter:
         for sample in step.active:
             all_trajectories.append(sample.trajectory)
 
-        unique_trajectory_uuids = set(traj.__uuid__ for traj in all_trajectories)
+        unique_trajectory_uuids = set(
+            traj.__uuid__ for traj in all_trajectories
+        )
         expected_raw_files = len(unique_trajectory_uuids)
 
         actual_trials = len(step.change.trials)
         expected_active = len(step.active)
 
-        exporter = SymLinkStepExporter(ext="db", base_dir=tmp_path, writer=self.mock_writer)
+        exporter = SymLinkStepExporter(
+            ext="db", base_dir=tmp_path, writer=self.mock_writer
+        )
 
         original_cwd = os.getcwd()
         os.chdir(tmp_path)
 
         try:
-            assert actual_trials == expected_trials, f"Expected {expected_trials} trials for {step_type}, got {actual_trials}"
+            assert actual_trials == expected_trials
 
             exporter.export_step(step)
 
             if pathlib.Path("raw_data").exists():
                 raw_files = list(pathlib.Path("raw_data").glob("*.db"))
-                assert len(raw_files) == expected_raw_files, f"Expected {expected_raw_files} raw files, got {len(raw_files)}"
+                assert len(raw_files) == expected_raw_files
 
             trial_files = []
             if pathlib.Path(f"{step.mccycle}/trials").exists():
-                trial_files = list(pathlib.Path(f"{step.mccycle}/trials").glob("*.db"))
-            assert len(trial_files) == actual_trials, f"Expected {actual_trials} trial symlinks, got {len(trial_files)}"
+                trial_files = list(
+                    pathlib.Path(f"{step.mccycle}/trials").glob("*.db")
+                )
+            assert len(trial_files) == actual_trials
 
             for trial_file in trial_files:
-                assert trial_file.is_symlink(), f"Trial file {trial_file} should be a symlink"
+                assert trial_file.is_symlink()
 
             active_files = []
             if pathlib.Path(f"{step.mccycle}/active").exists():
-                active_files = list(pathlib.Path(f"{step.mccycle}/active").glob("*.db"))
+                active_files = list(
+                    pathlib.Path(f"{step.mccycle}/active").glob("*.db")
+                )
 
-            assert len(active_files) == expected_active, f"Expected {expected_active} active symlinks, got {len(active_files)}"
+            assert len(active_files) == expected_active
 
             for active_file in active_files:
-                assert active_file.is_symlink(), f"Active file {active_file} should be a symlink"
+                assert active_file.is_symlink()
 
         finally:
             os.chdir(original_cwd)
@@ -299,35 +313,45 @@ def test_export_steps(all_steps, tmp_path):
     try:
         export_steps(all_steps, ext="db", writer=mock_writer)
 
-        assert pathlib.Path("raw_data").exists(), "Raw data directory should exist"
+        assert pathlib.Path("raw_data").exists()
         raw_files = list(pathlib.Path("raw_data").glob("*.db"))
-        assert len(raw_files) > 0, "Should have raw data files"
+        assert len(raw_files) > 0
 
         for step in all_steps:
             step_dir = pathlib.Path(str(step.mccycle))
-            assert step_dir.exists(), f"Step directory {step_dir} should exist"
+            assert step_dir.exists()
 
             trials_dir = step_dir / "trials"
-            assert trials_dir.exists(), f"Trials directory {trials_dir} should exist"
+            assert trials_dir.exists()
 
             active_dir = step_dir / "active"
-            assert active_dir.exists(), f"Active directory {active_dir} should exist"
+            assert active_dir.exists()
 
-        export_steps(all_steps, ext="db2", writer=mock_writer, export_trials=False)
+        export_steps(
+            all_steps,
+            ext="db2",
+            writer=mock_writer,
+            export_trials=False
+        )
 
         for step in all_steps:
             trials_dir = pathlib.Path(str(step.mccycle)) / "trials"
             if trials_dir.exists():
                 trial_files = list(trials_dir.glob("*.db2"))
-                assert len(trial_files) == 0, "Should not have .db2 trial files when export_trials=False"
+                assert len(trial_files) == 0
 
-        export_steps(all_steps, ext="db3", writer=mock_writer, export_active=False)
+        export_steps(
+            all_steps,
+            ext="db3",
+            writer=mock_writer,
+            export_active=False
+        )
 
         for step in all_steps:
             active_dir = pathlib.Path(str(step.mccycle)) / "active"
             if active_dir.exists():
                 active_files = list(active_dir.glob("*.db3"))
-                assert len(active_files) == 0, "Should not have .db3 active files when export_active=False"
+                assert len(active_files) == 0
 
     finally:
         os.chdir(original_cwd)
