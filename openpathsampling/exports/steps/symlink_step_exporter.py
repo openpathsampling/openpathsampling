@@ -59,9 +59,11 @@ class SymLinkStepExporter:
     def _get_ensemble_id(self, sample):
         """Get the ensemble ID (used in file names) for a sample.
         """
-        ensemble_id = sample.ensemble.name
-        if not ensemble_id:
+        if sample.ensemble.is_named:
+            ensemble_id = sample.ensemble.name
+        else:
             ensemble_id = str(sample.ensemble.__uuid__)
+
         return ensemble_id
 
     def _get_writer(self, sample):
@@ -99,15 +101,11 @@ class SymLinkStepExporter:
         if not pathlib.Path(raw_data_path).exists():
             self.export_raw_sample(step, sample)
 
-        # ensure parent directory exists
         pathlib.Path(path).parent.mkdir(parents=True, exist_ok=True)
-        
-        # Calculate relative path from symlink location to target
         symlink_path = pathlib.Path(path)
         target_path = pathlib.Path(raw_data_path)
         relative_target = os.path.relpath(target_path, symlink_path.parent)
-        
-        # Skip if symlink already exists
+
         if not symlink_path.exists():
             os.symlink(relative_target, path)
 

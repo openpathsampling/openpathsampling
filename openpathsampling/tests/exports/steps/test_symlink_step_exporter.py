@@ -25,7 +25,6 @@ def shooting_step(default_unidirectional_tis):
     ensemble = scheme.network.sampling_ensembles[0]
 
     # Create a shooting move that will be accepted
-    # Use make_trajectory from fixture for proper trajectory generation
     partial_traj = default_unidirectional_tis.make_trajectory(-1, 2).reversed
     move = MockForwardShooting(
         shooting_index=2,
@@ -61,13 +60,11 @@ def repex_step(default_unidirectional_tis):
 @pytest.fixture
 def pathreversal_step(default_unidirectional_tis):
     scheme = default_unidirectional_tis.scheme
-    traj = default_unidirectional_tis.make_tis_trajectory(6)  # will be accepted
+    traj = default_unidirectional_tis.make_tis_trajectory(6)
     init_conds = scheme.initial_conditions_from_trajectories(traj)
 
-    # Create a path reversal move
     move = MockPathReversal(scheme)
 
-    # Run the move to get a step
     steplist = list(run_moves(init_conds, [move]))
     assert len(steplist) == 1
     step = steplist[0]
@@ -75,15 +72,12 @@ def pathreversal_step(default_unidirectional_tis):
 
 @pytest.fixture
 def all_steps(shooting_step, repex_step, pathreversal_step):
-    """Collection of all step fixtures"""
     return [shooting_step, repex_step, pathreversal_step]
 
 @pytest.fixture
 def unnamed_ensemble():
     cv = paths.FunctionCV("x", lambda s: s.xyz[0][0])
     ensemble = paths.CVDefinedVolume(cv, -1.0, 1.0)
-    # Explicitly set name to None to ensure it's truly unnamed
-    ensemble._name = None
     return ensemble
 
 @pytest.fixture
