@@ -90,13 +90,13 @@ def named_ensemble():
 class TestSymLinkStepExporter:
     def setup_method(self):
         """Setup method to create exporter instance for tests."""
-        self.exporter = SymLinkStepExporter(ext="dat")
-
         self.mock_writer = Mock()
+        self.mock_writer.ext = "dat"
         def mock_write_func(trajectory, filename):
             pathlib.Path(filename).parent.mkdir(parents=True, exist_ok=True)
             pathlib.Path(filename).touch()
         self.mock_writer.side_effect = mock_write_func
+        self.exporter = SymLinkStepExporter(writer=self.mock_writer)
 
     @pytest.mark.parametrize("source", ["name", "uuid"])
     def test_get_ensemble_id(self, source, request):
@@ -114,7 +114,8 @@ class TestSymLinkStepExporter:
     def test_get_writer(self, source):
         if source == "obj":
             mock_writer = Mock()
-            exporter = SymLinkStepExporter(ext="dat", writer=mock_writer)
+            mock_writer.ext = "dat"
+            exporter = SymLinkStepExporter(writer=mock_writer)
             sample = Mock()
             sample.trajectory = []
 
@@ -122,7 +123,7 @@ class TestSymLinkStepExporter:
             assert result is mock_writer
 
         elif source == "most_common":
-            exporter = SymLinkStepExporter(ext="dat", writer=None)
+            exporter = SymLinkStepExporter(writer=None)
 
             traj1 = make_1d_traj([1.0])
             traj2 = make_1d_traj([2.0, 3.0])
@@ -137,10 +138,11 @@ class TestSymLinkStepExporter:
             sample.trajectory = combined_traj
 
             result = exporter._get_writer(sample)
-            assert result == engine2.export_trajectory
+            default_writer = engine2._default_trajectory_writer()
+            assert result.__class__ is default_writer.__class__
 
     def test_substitution_dict(self, shooting_step):
-        exporter = SymLinkStepExporter(ext="dat")
+        exporter = SymLinkStepExporter(writer=self.mock_writer)
 
         step = shooting_step
         sample = step.change.trials[0]
@@ -150,14 +152,14 @@ class TestSymLinkStepExporter:
         assert subs["step"] is step
         assert subs["sample"] is sample
         assert subs["ensemble_id"] == exporter._get_ensemble_id(sample)
-        assert subs["ext"] == "dat"
+        assert subs["ext"] == self.mock_writer.ext
 
     def test_export_trial_sample(self, shooting_step, tmp_path):
         step = shooting_step
         sample = step.change.trials[0]
 
         exporter = SymLinkStepExporter(
-            ext="db", base_dir=tmp_path, writer=self.mock_writer
+            base_dir=tmp_path, writer=self.mock_writer
         )
         assert tmp_path.exists()
         assert tmp_path.is_dir()
@@ -187,7 +189,7 @@ class TestSymLinkStepExporter:
         sample = step.active[0]
 
         exporter = SymLinkStepExporter(
-            ext="db", base_dir=tmp_path, writer=self.mock_writer
+            base_dir=tmp_path, writer=self.mock_writer
         )
 
         original_cwd = os.getcwd()
@@ -214,7 +216,7 @@ class TestSymLinkStepExporter:
         sample = step.active[0]
 
         exporter = SymLinkStepExporter(
-            ext="db", base_dir=tmp_path, writer=self.mock_writer
+            base_dir=tmp_path, writer=self.mock_writer
         )
 
         original_cwd = os.getcwd()
@@ -245,22 +247,15 @@ class TestSymLinkStepExporter:
 
         step = request.getfixturevalue(f"{step_type}_step")
 
-        all_trajectories = []
-        for sample in step.change.trials:
-            all_trajectories.append(sample.trajectory)
-        for sample in step.active:
-            all_trajectories.append(sample.trajectory)
-
-        unique_trajectory_uuids = set(
-            traj.__uuid__ for traj in all_trajectories
-        )
-        expected_raw_files = len(unique_trajectory_uuids)
+        unique_trajectories = {
+            s.trajectory for s in step.change.trials + list(step.active)
+        }
 
         actual_trials = len(step.change.trials)
         expected_active = len(step.active)
 
         exporter = SymLinkStepExporter(
-            ext="db", base_dir=tmp_path, writer=self.mock_writer
+            base_dir=tmp_path, writer=self.mock_writer
         )
 
         original_cwd = os.getcwd()
@@ -271,25 +266,24 @@ class TestSymLinkStepExporter:
 
             exporter.export_step(step)
 
-            if pathlib.Path("raw_data").exists():
-                raw_files = list(pathlib.Path("raw_data").glob("*.db"))
-                assert len(raw_files) == expected_raw_files
+            raw_dir = pathlib.Path("raw_data")
+            assert raw_dir.exists()
+            raw_files = list(raw_dir.glob(f"*.{self.mock_writer.ext}"))
+            assert len(raw_files) == len(unique_trajectories)
 
-            trial_files = []
-            if pathlib.Path(f"{step.mccycle}/trials").exists():
-                trial_files = list(
-                    pathlib.Path(f"{step.mccycle}/trials").glob("*.db")
-                )
+            trials_dir = pathlib.Path(f"{step.mccycle}/trials")
+            assert trials_dir.exists()
+            trial_files = list(trials_dir.glob(f"*.{self.mock_writer.ext}"))
             assert len(trial_files) == actual_trials
 
             for trial_file in trial_files:
                 assert trial_file.is_symlink()
 
-            active_files = []
-            if pathlib.Path(f"{step.mccycle}/active").exists():
-                active_files = list(
-                    pathlib.Path(f"{step.mccycle}/active").glob("*.db")
-                )
+            active_dir = pathlib.Path(f"{step.mccycle}/active")
+            assert active_dir.exists()
+            active_files = list(
+                active_dir.glob(f"*.{self.mock_writer.ext}")
+            )
 
             assert len(active_files) == expected_active
 
@@ -302,6 +296,7 @@ class TestSymLinkStepExporter:
 
 def test_export_steps(all_steps, tmp_path):
     mock_writer = Mock()
+    mock_writer.ext = "db"
     def mock_write_func(trajectory, filename):
         pathlib.Path(filename).parent.mkdir(parents=True, exist_ok=True)
         pathlib.Path(filename).touch()
@@ -311,10 +306,10 @@ def test_export_steps(all_steps, tmp_path):
     os.chdir(tmp_path)
 
     try:
-        export_steps(all_steps, ext="db", writer=mock_writer)
+        export_steps(all_steps, writer=mock_writer)
 
         assert pathlib.Path("raw_data").exists()
-        raw_files = list(pathlib.Path("raw_data").glob("*.db"))
+        raw_files = list(pathlib.Path("raw_data").glob(f"*.{mock_writer.ext}"))
         assert len(raw_files) > 0
 
         for step in all_steps:
@@ -327,31 +322,29 @@ def test_export_steps(all_steps, tmp_path):
             active_dir = step_dir / "active"
             assert active_dir.exists()
 
-        export_steps(
-            all_steps,
-            ext="db2",
-            writer=mock_writer,
-            export_trials=False
-        )
+        writer_db2 = Mock()
+        writer_db2.ext = "db2"
+        writer_db2.side_effect = mock_write_func
+
+        export_steps(all_steps, writer=writer_db2, export_trials=False)
 
         for step in all_steps:
             trials_dir = pathlib.Path(str(step.mccycle)) / "trials"
-            if trials_dir.exists():
-                trial_files = list(trials_dir.glob("*.db2"))
-                assert len(trial_files) == 0
+            assert trials_dir.exists()
+            trial_files = list(trials_dir.glob(f"*.{writer_db2.ext}"))
+            assert len(trial_files) == 0
 
-        export_steps(
-            all_steps,
-            ext="db3",
-            writer=mock_writer,
-            export_active=False
-        )
+        writer_db3 = Mock()
+        writer_db3.ext = "db3"
+        writer_db3.side_effect = mock_write_func
+
+        export_steps(all_steps, writer=writer_db3, export_active=False)
 
         for step in all_steps:
             active_dir = pathlib.Path(str(step.mccycle)) / "active"
-            if active_dir.exists():
-                active_files = list(active_dir.glob("*.db3"))
-                assert len(active_files) == 0
+            assert active_dir.exists()
+            active_files = list(active_dir.glob(f"*.{writer_db3.ext}"))
+            assert len(active_files) == 0
 
     finally:
         os.chdir(original_cwd)

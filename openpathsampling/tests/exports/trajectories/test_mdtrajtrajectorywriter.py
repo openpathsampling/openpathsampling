@@ -10,7 +10,7 @@ def test_mdtraj_trajectory_writer(ad_trajectory, ad_grofile, tmp_path):
 
     import mdtraj as md
     outfile = tmp_path / "test.xtc"
-    writer = MDTrajTrajectoryWriter()
+    writer = MDTrajTrajectoryWriter(ext="xtc")
     assert not outfile.exists()
     writer(ad_trajectory, outfile)
     assert outfile.exists()
@@ -31,7 +31,7 @@ def test_subtrajectory_selection(ad_trajectory, selection, tmp_path):
 
     import mdtraj as md
     outfile = tmp_path / "test.xtc"
-    writer = MDTrajTrajectoryWriter(mdtraj_selection=selection)
+    writer = MDTrajTrajectoryWriter(ext="xtc", mdtraj_selection=selection)
     assert not outfile.exists()
     writer(ad_trajectory, outfile)
     assert outfile.exists()
@@ -58,6 +58,6 @@ def test_mdtraj_trajectory_writer_selection_error(ad_trajectory, tmp_path):
     if not HAS_MDTRAJ:
         pytest.skip("mdtraj is not available")
 
-    writer = MDTrajTrajectoryWriter(mdtraj_selection=object())
+    writer = MDTrajTrajectoryWriter(ext="xtc", mdtraj_selection=object())
     with pytest.raises(TypeError):
         writer(ad_trajectory, tmp_path / "test.xtc")

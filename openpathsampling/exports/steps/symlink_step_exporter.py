@@ -26,8 +26,6 @@ class SymLinkStepExporter:
 
     Parameters
     ----------
-    ext : str
-       The extension to use for the raw data files.
     writer : Optional[Callable]
        The TrajectoryWriter to use for exporting the raw data. If None, the
        default writer for the most common engine in the step will be used.
@@ -40,7 +38,6 @@ class SymLinkStepExporter:
     """
     def __init__(
         self,
-        ext,
         writer=None,
         *,
         base_dir='.',
@@ -49,7 +46,6 @@ class SymLinkStepExporter:
         trial_pattern=_DEFAULT_TRIAL_PATTERN,
         active_pattern=_DEFAULT_ACTIVE_PATTERN,
     ):
-        self.ext = ext
         self.writer = writer
         self.base_dir = pathlib.Path(base_dir)
         self.raw_data_pattern = raw_data_pattern
@@ -78,7 +74,7 @@ class SymLinkStepExporter:
             engines = collections.Counter([s.engine for s in
                                           sample.trajectory])
             engine = engines.most_common(1)[0][0]
-            writer = engine.export_trajectory
+            writer = engine._default_trajectory_writer()
         return writer
 
     def _substitution_dict(self, step, sample):
@@ -88,7 +84,7 @@ class SymLinkStepExporter:
             "step": step,
             "sample": sample,
             "ensemble_id": ensemble_id,
-            "ext": self.ext,
+            "ext": writer.ext,
         }
 
     def _export_sample_symlink(self, pattern, step, sample):
@@ -169,16 +165,14 @@ class SymLinkStepExporter:
             self.export_active_sample(step, sample)
 
 
-def export_steps(steps, ext, writer=None, *, export_trials=True,
+def export_steps(steps, writer=None, *, export_trials=True,
                  export_active=True):
     trial_pattern = _DEFAULT_TRIAL_PATTERN if export_trials else None
     active_pattern = _DEFAULT_ACTIVE_PATTERN if export_active else None
     exporter = SymLinkStepExporter(
-        ext=ext,
         writer=writer,
         trial_pattern=trial_pattern,
         active_pattern=active_pattern,
     )
     for step in steps:
         exporter.export_step(step)
-
