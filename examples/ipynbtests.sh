@@ -42,8 +42,12 @@ case $PYTHON_VERSION in
         mstis="$dropbox_base_url2/wnqnwh0mmnhvm69h7h0br/toy_mstis_1k_OPS1_py312.nc?rlkey=6l2m6xiphvkpspp0ynix2m6zn&dl=1"
         mistis="$dropbox_base_url2/tvajjucljm83a2eo6m9ps/toy_mistis_1k_OPS1_py312.nc?rlkey=dk99cj8nlwu1re42drqngf59c&dl=1"
         ;;
+    "3.13")
+        mstis="$dropbox_base_url2/ofr9e8doooev99vmk6394/toy_mstis_1k_OPS1_py313.nc?rlkey=hzwzwxa5u57abv43ibuap5hpo&dl=1"
+        mistis="$dropbox_base_url2/tyxlixrnaog2rqepb7kt3/toy_mistis_1k_OPS1_py313.nc?rlkey=sv860b9clyja0ccn1nfsg0w07&dl=1"
+        ;;
     *)
-        echo "Unsupported Python version: $PYTHON_VERSION"
+        echo "Unsupported Python version: $PYTHON_VERSION" && exit 1
 esac
 
 set -x
@@ -55,7 +59,7 @@ set +x
 ls *nc
 cd toy_model_mstis/
 date
-py.test --nbval-lax --current-env -v \
+py.test --nbval-lax --nbval-current-env -v \
     toy_mstis_1_setup.ipynb \
     toy_mstis_2_run.ipynb \
     toy_mstis_3_analysis.ipynb \
@@ -65,14 +69,14 @@ py.test --nbval-lax --current-env -v \
 cd ../toy_model_mistis/
 date
 # skip toy_mistis_2_flux: not needed
-py.test --nbval-lax --current-env -v \
+py.test --nbval-lax --nbval-current-env -v \
     toy_mistis_1_setup_run.ipynb \
     toy_mistis_3_analysis.ipynb \
     || testfail=1
 
 cd ../tests/
 cp ../toy_model_mstis/mstis.nc ./
-py.test --nbval --current-env \
+py.test --nbval --nbval-current-env \
     test_openmm_integration.ipynb \
     test_snapshot.ipynb \
     test_netcdfplus.ipynb \
@@ -81,7 +85,7 @@ py.test --nbval --current-env \
 
 cd ../misc/
 cp ../toy_model_mstis/mstis.nc ./
-pytest --nbval-lax --current-env tutorial_storage.ipynb || testfail=1
+pytest --nbval-lax --nbval-current-env tutorial_storage.ipynb || testfail=1
 
 cd ..
 rm toy_mstis_1k_OPS1.nc
