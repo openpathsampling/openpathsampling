@@ -598,3 +598,9 @@ class Trajectory(list, StorableObject):
             return paths.Trajectory([trajectories])
 
         return trajectories
+
+    def unproxy(self):
+        for idx, snapshot in enumerate(self.iter_proxies()):
+            if issubclass(type(snapshot), LoaderProxy):
+                list.__setitem__(self, idx, snapshot.__subject__)
+                snapshot.__subject__.unproxy();
