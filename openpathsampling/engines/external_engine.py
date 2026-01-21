@@ -254,7 +254,12 @@ class ExternalEngine(DynamicsEngine):
         file_prefix = self.filename_setter()
         self.set_filenames(file_prefix)
         self.write_frame_to_file(self.input_file, self.current_snapshot, "w")
-        self.prepare()
+        error_code = self.prepare()
+        if error_code:
+            # subclasses SHOULD raise an error if there's a problem here,
+            # but if they don't, we catch it now
+            raise RuntimeError("Something went wrong when preparing to "
+                               "run the trajectory.")
 
         self.start_time = time.time()
         try:
@@ -317,8 +322,13 @@ class ExternalEngine(DynamicsEngine):
     def prepare(self):
         """
         Any preparation between writing snapshot and running command
+
+        Returns
+        -------
+        int :
+            Error code. Return 0 on success, nonzero on any error.
         """
-        pass
+        return 0
 
     def cleanup(self):
         """Any cleanup actions to do after the subprocess dies."""
