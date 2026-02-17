@@ -61,3 +61,11 @@ def test_mdtraj_trajectory_writer_selection_error(ad_trajectory, tmp_path):
     writer = MDTrajTrajectoryWriter(ext="xtc", mdtraj_selection=object())
     with pytest.raises(TypeError):
         writer(ad_trajectory, tmp_path / "test.xtc")
+
+
+def test_mdtraj_writer_ext():
+    if not HAS_MDTRAJ:
+        pytest.skip("mdtraj is not available")
+
+    writer = MDTrajTrajectoryWriter(ext="xtc")
+    assert writer.ext == "xtc"

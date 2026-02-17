@@ -6,7 +6,7 @@ from unittest.mock import Mock
 
 from openpathsampling.exports.steps.symlink_step_exporter import (
     SymLinkStepExporter,
-    _DEFAULT_TRIAL_PATTERN, _DEFAULT_ACTIVE_PATTERN,
+    _DEFAULT_TRIAL_PATTERN, _DEFAULT_ACTIVE_PATTERN, _DEFAULT_RAW_DATA_PATTERN,
     export_steps,
 )
 
@@ -348,3 +348,41 @@ def test_export_steps(all_steps, tmp_path):
 
     finally:
         os.chdir(original_cwd)
+
+
+def test_default_raw_pattern_paths(shooting_step):
+    writer = Mock()
+    writer.ext = "dat"
+    exporter = SymLinkStepExporter(writer=writer)
+
+    sample = shooting_step.change.trials[0]
+    subs = exporter._substitution_dict(shooting_step, sample)
+
+    expected = f"raw_data/{sample.trajectory.__uuid__}.{writer.ext}"
+    assert _DEFAULT_RAW_DATA_PATTERN.format(**subs) == expected
+
+
+def test_default_trial_pattern_paths(shooting_step):
+    writer = Mock()
+    writer.ext = "dat"
+    exporter = SymLinkStepExporter(writer=writer)
+
+    sample = shooting_step.change.trials[0]
+    subs = exporter._substitution_dict(shooting_step, sample)
+    ensemble_id = exporter._get_ensemble_id(sample)
+
+    expected = f"{shooting_step.mccycle}/trials/{ensemble_id}.{writer.ext}"
+    assert _DEFAULT_TRIAL_PATTERN.format(**subs) == expected
+
+
+def test_default_active_pattern_paths(shooting_step):
+    writer = Mock()
+    writer.ext = "dat"
+    exporter = SymLinkStepExporter(writer=writer)
+
+    sample = shooting_step.active[0]
+    subs = exporter._substitution_dict(shooting_step, sample)
+    ensemble_id = exporter._get_ensemble_id(sample)
+
+    expected = f"{shooting_step.mccycle}/active/{ensemble_id}.{writer.ext}"
+    assert _DEFAULT_ACTIVE_PATTERN.format(**subs) == expected

@@ -28,3 +28,11 @@ def test_trr_trajectory_writer(ad_trajectory, tmp_path):
     npt.assert_allclose(box, ad_trajectory.box_vectors)
     npt.assert_allclose(lambd, np.zeros(len(ad_trajectory)))
     npt.assert_allclose(time, np.zeros(len(ad_trajectory)))
+
+
+def test_trr_writer_ext():
+    if not HAS_MDTRAJ:
+        pytest.skip("mdtraj is not available")
+
+    writer = TRRTrajectoryWriter()
+    assert writer.ext == "trr"
