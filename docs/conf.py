@@ -15,9 +15,9 @@
 import sys
 import os
 import shutil
+from importlib.metadata import PackageNotFoundError, version as get_version
 
 # we use these to get the version
-import pkg_resources
 import packaging.version
 
 import openpathsampling
@@ -136,7 +136,10 @@ copyright = u'2014-2022, David W.H. Swenson, Jan-Hendrik Prinz, John Chodera, Pe
 # built documents.
 #
 # The full version, including alpha/beta/rc tags.
-release = pkg_resources.get_distribution('openpathsampling').version
+try:
+    release = get_version('openpathsampling')
+except PackageNotFoundError:
+    release = openpathsampling.version.version
 # The short X.Y version.
 # version = packaging.version.Version(release).base_version
 version = release  # prefer to have the .dev0 label on 'latest'

@@ -5,8 +5,8 @@ a duck.
 @author David W.H. Swenson
 """
 
-import os
 from functools import wraps
+from importlib.resources import files
 from openpathsampling.engines import NoEngine
 import numpy as np
 import numpy.testing as npt
@@ -18,8 +18,6 @@ try:
     import mdtraj as md
 except ImportError:
     md = None
-
-from pkg_resources import resource_filename
 
 import openpathsampling as paths
 import openpathsampling.engines.openmm as peng
@@ -178,8 +176,7 @@ def prepend_exception_message(e, failmsg):
         e.args = tuple([arg0] + list(e.args[1:]))
 
 def data_filename(fname, subdir='test_data'):
-    return resource_filename('openpathsampling',
-                             os.path.join('tests', subdir, fname))
+    return str(files('openpathsampling.tests').joinpath(subdir, fname))
 
 def true_func(value, *args, **kwargs):
     return True
