@@ -36,6 +36,16 @@ class TestResamplingStatistics(object):
         )
         assert_frame_equal(std_df(self.inputs), expected_std)
 
+    def test_std_object_dtype(self):
+        from openpathsampling.numerics.resampling_statistics import std_df
+        object_inputs = [df.astype(object) for df in self.inputs]
+        expected_std = pd.DataFrame(
+            [[0.17677669529663689, 0.17677669529663689],
+             [0.10606601717798207, 0.17677669529663689]],
+            columns=['A', 'B'], index=['A', 'B']
+        )
+        assert_frame_equal(std_df(object_inputs), expected_std)
+
     def test_initialization(self):
         stats = paths.numerics.ResamplingStatistics(
             function=lambda x: x,

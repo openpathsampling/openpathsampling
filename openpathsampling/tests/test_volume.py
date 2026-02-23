@@ -224,6 +224,14 @@ class TestCVDefinedVolume(object):
         expected = inp in ['float', 'array1']
         assert isinstance(val, float) is expected
 
+    @pytest.mark.filterwarnings("ignore:The CV 'cv' returns an iterable")
+    def test_get_cv_float_array_raises(self):
+        snap = make_1d_traj([0.0])[0]
+        volume = self._vol_for_cv_type('array')
+        with pytest.raises(TypeError,
+                           match="only 0-dimensional arrays can be converted"):
+            _ = volume._get_cv_float(snap)
+
 
 class TestCVRangeVolumePeriodic(object):
     def setup_method(self):
