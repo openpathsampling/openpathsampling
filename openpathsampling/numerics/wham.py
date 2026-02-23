@@ -188,10 +188,7 @@ class WHAM(object):
         pandas.DataFrame
             unweighting values for the input dataframe
         """
-        unweighting = cleaned_df.copy().applymap(
-            lambda x: 1.0 if x > 0.0 else 0.0
-        )
-        return unweighting
+        return cleaned_df.gt(0.0).astype(float)
 
     def sum_k_Hk_Q(self, cleaned_df):
         r"""Sum over histograms for each histogram bin. Length is n_bins
