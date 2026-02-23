@@ -66,7 +66,7 @@ def std_df(objects, mean_x=None):
     n_obj = float(len(objects))
     sq = [o**2 for o in objects]
     variance = mean_df(sq) - mean_x**2
-    return np.sqrt(variance)
+    return variance.apply(lambda s: s.map(np.sqrt))
 
 class ResamplingStatistics(object):
     """
