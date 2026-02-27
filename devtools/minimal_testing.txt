@@ -1,4 +1,0 @@
-nose
-pytest
-pytest-cov
-coveralls

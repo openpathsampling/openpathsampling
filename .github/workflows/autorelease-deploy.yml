@@ -1,15 +1,20 @@
-name: Autorelease
+# Vendored from Autorelease 0.6.1
+# Update by updating Autorelease and running `autorelease vendor actions`
+name: "Autorelease Deploy"
 on:
   release:
     types: [published]
 
 jobs:
   deploy_pypi:
+    if: ${{ github.repository == 'openpathsampling/openpathsampling' }}
     runs-on: ubuntu-latest
     name: "Deploy to PyPI"
+    permissions:
+      id-token: write
     steps:
-      - uses: actions/checkout@v2
-      - uses: actions/setup-python@v2
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
         with:
           python-version: "3.x"
       - run: |  # TODO: move this to an action
@@ -30,8 +35,6 @@ jobs:
           python setup.py sdist bdist_wheel
           twine check dist/*
         name: "Build and check package"
-      - uses: pypa/gh-action-pypi-publish@master
-        with:
-          password: ${{ secrets.pypi_password }}
+      - uses: pypa/gh-action-pypi-publish@release/v1
         name: "Deploy to pypi"
  

@@ -1,8 +1,8 @@
 from __future__ import print_function
 import os
-import pkg_resources
 import tempfile
 import subprocess
+from importlib import metadata
 import openpathsampling.version
 
 import argparse
@@ -23,10 +23,11 @@ PREFIX = 'latest'
     # PREFIX = openpathsampling.version.short_version
 
 def is_s3cmd_installed():
-    dists = pkg_resources.working_set
-    if not any(d.project_name == 's3cmd' for d in dists):
+    try:
+        metadata.distribution('s3cmd')
+    except metadata.PackageNotFoundError as exc:
         raise ImportError('The s3cmd package is required. '
-                          'try $ pip install s3cmd')
+                          'try $ pip install s3cmd') from exc
 
 def run_cmd(template, config_filename, dry=False):
     cmd = template.format(
@@ -73,4 +74,3 @@ secret_key = {AWS_SECRET_ACCESS_KEY}
             #config=f.name,
             #bucket=BUCKET_NAME)
     #return_val = subprocess.call(cmd.split())
-

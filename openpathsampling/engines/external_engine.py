@@ -1,7 +1,8 @@
 from openpathsampling.netcdfplus import StorableNamedObject
 from openpathsampling.engines.dynamics_engine import DynamicsEngine
 from openpathsampling.engines.snapshot import BaseSnapshot, SnapshotDescriptor
-from openpathsampling.engines.toy import ToySnapshot
+from openpathsampling.deprecations import NEW_DEFAULT_FILENAME_SETTER
+
 import numpy as np
 import os
 
@@ -12,13 +13,15 @@ import signal
 import shlex
 import time
 
+from subprocess import PIPE
+
 import sys
 if sys.version_info > (3, ):
     long = int
 
-import linecache
 
 logger = logging.getLogger(__name__)
+
 
 def close_file_descriptors(basename):
     """Close file descriptors for the given filename.
@@ -48,6 +51,7 @@ def _debug_open_files(where=None, ext=".trr"):
                 message.append(loc_msg)
 
             raise Exception("\n".join(message))
+
 
 def _debug_snapshot_loading(snapshot):
     snapshot.load_details()
@@ -90,6 +94,7 @@ class RandomStringFilenames(FilenameSetter):
         string containing the allowed characters to return
     """
     _allowed = 'abcdefghijklmnopqrstuvwxyz0123456789'
+
     def __init__(self, length=8, allowed=None):
         super(RandomStringFilenames, self).__init__()
         self.length = length
@@ -98,6 +103,7 @@ class RandomStringFilenames(FilenameSetter):
 
     def __call__(self):
         return "".join(np.random.choice(self.allowed, self.length))
+
 
 class _InternalizedEngineProxy(DynamicsEngine):
     """Wrapper that allows snapshots to be "internalized."
@@ -134,14 +140,14 @@ class ExternalEngine(DynamicsEngine):
     """
 
     _default_options = {
-        'n_frames_max' : 10000,
-        'name_prefix' : "test",
-        'default_sleep_ms' : 100,
-        'auto_optimize_sleep' : True,
-        'engine_sleep' : 100,
-        'engine_directory' : "",
-        'n_spatial' : 1,
-        'n_atoms' : 1,
+        'n_frames_max': 10000,
+        'name_prefix': "test",
+        'default_sleep_ms': 100,
+        'auto_optimize_sleep': True,
+        'engine_sleep': 100,
+        'engine_directory': "",
+        'n_spatial': 1,
+        'n_atoms': 1,
         'n_poll_per_step': 1,
         'filename_setter': FilenameSetter(),
     }
@@ -161,6 +167,11 @@ class ExternalEngine(DynamicsEngine):
         self._current_snapshot = template
         self.n_frames_since_start = None
         self.internalized_engine = _InternalizedEngineProxy(self)
+        if 'filename_setter' not in options:
+            # Level 6 is needed to raise it to the initialization of a
+            # gromacs engine. This is a FutureWarning to also warn
+            # users, not only developers.
+            NEW_DEFAULT_FILENAME_SETTER.warn(6, category=FutureWarning)
 
     def to_dict(self):
         dct = super(ExternalEngine, self).to_dict()
@@ -207,25 +218,26 @@ class ExternalEngine(DynamicsEngine):
                     next_frame = None
                 else:
                     raise
-            #print self.frame_num, next_frame # DEBUG LOGGER
+            # print self.frame_num, next_frame # DEBUG LOGGER
             now = time.time()
             if next_frame == "partial":
                 if self.proc.poll() is not None:
                     raise RuntimeError("External engine died unexpectedly")
-                time.sleep(0.001) # wait a millisec and rerun
+                time.sleep(0.001)  # wait a millisec and rerun
             elif next_frame is None:
                 if self.proc.poll() is not None:
                     raise RuntimeError("External engine died unexpectedly")
                 logger.debug("Sleeping for {:.2f}ms".format(self.sleep_ms))
                 time.sleep(self.sleep_ms/1000.0)
-            elif isinstance(next_frame, BaseSnapshot): # success
+            elif isinstance(next_frame, BaseSnapshot):  # success
                 self.n_frames_since_start += 1
                 logger.debug("Found frame %d", self.n_frames_since_start)
                 self.current_snapshot = next_frame
                 next_frame_found = True
                 self.frame_num += 1
             else:  # pragma: no cover
-                raise RuntimeError("Strange return value from read_next_frame_from_file")
+                raise RuntimeError("Strange return value from "
+                                   "read_next_frame_from_file")
             if self.auto_optimize_sleep and self.n_frames_since_start > 0:
                 n_poll_per_step = self.options['n_poll_per_step']
                 elapsed = now - self.start_time
@@ -244,20 +256,24 @@ class ExternalEngine(DynamicsEngine):
         self.write_frame_to_file(self.input_file, self.current_snapshot, "w")
         self.prepare()
 
-        cmd = shlex.split(self.engine_command())
         self.start_time = time.time()
         try:
             logger.info(self.engine_command())
-            # TODO: add the ability to have handlers for stdin and stdout
             self.proc = psutil.Popen(shlex.split(self.engine_command()),
-                                     preexec_fn=os.setsid)
+                                     preexec_fn=os.setsid,
+                                     stdout=PIPE,
+                                     stderr=PIPE)
         except OSError:  # pragma: no cover
-            raise  #TODO: need to handle this, but do what?
+            raise  # TODO: need to handle this, but do what?
         else:
             logger.info("Started engine: " + str(self.proc))
 
         if self.first_frame_in_file:
             _ = self.generate_next_frame()  # throw away repeat first frame
+
+    def _communicate(self):  # -no-cov-
+        # this is primarily for debug purposes
+        return self.proc.communicate()
 
     def stop(self, trajectory):
         super(ExternalEngine, self).stop(trajectory)
@@ -318,3 +334,30 @@ class ExternalEngine(DynamicsEngine):
         """Generates a string for the command to run the engine."""
         raise NotImplementedError()
 
+    def restart_at_step(self, step):
+        """Restart the filecounter (if used) to the right number."""
+        if not type(self.filename_setter) == FilenameSetter:
+            # Nothing to do
+            # TODO OPS 2.0: this can be turned into isinstance after
+            # inheritance is swapped
+            return
+        # Grab the last trajectory that was written to the storage
+        last_trajectory = step.simulation.storage.trajectories[-1]
+        # As this trajectory can be made from different files, querry all files
+        possible_last_trajs = set(frame.file_name for frame in last_trajectory)
+
+        # Split off extensions and directories,
+        # loop backwards untill we find a non-number, and cast to int
+        possible_numbers = []
+        numbers = '0123456789'
+        for traj in possible_last_trajs:
+            traj = traj.rsplit('.', 1)[0]  # split off extension
+            traj = traj.replace('\\', '/').split('/')[-1]  # split directories
+            string = ""
+            for c in traj[::-1]:
+                if c not in numbers:
+                    break
+                string += c
+            possible_numbers.append(int(string[::-1]))
+        last_number = max(possible_numbers)
+        self.filename_setter.count = last_number + 1

@@ -51,7 +51,7 @@ def test_version_tuple_to_string(version_tup, version_str):
     assert version_tuple_to_string(version_tup) == version_str
 
 class TestDeprecation(object):
-    def setup(self):
+    def setup_method(self):
         self.foo, self.bar = make_foo_bar_baz()[0:2]
 
     def test_message(self):
@@ -78,7 +78,7 @@ class TestDeprecation(object):
 
 
 class TestDeprecationDecorators(object):
-    def setup(self):
+    def setup_method(self):
         self.foo, self.bar, self.baz = make_foo_bar_baz()
 
         @deprecate(self.foo)

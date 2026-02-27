@@ -198,7 +198,7 @@ all_objects = create_test_objects()
 
 
 class TestMockBackend(object):
-    def setup(self):
+    def setup_method(self):
         self.backend = MockBackend()
 
     @pytest.mark.parametrize(('obj_name', 'table_idx', 'idx'),

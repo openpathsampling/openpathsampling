@@ -10,7 +10,7 @@ mdtraj = pytest.importorskip("mdtraj")
 
 
 class TestPyEMMAFeaturizerCV(object):
-    def setup(self):
+    def setup_method(self):
         self.md_trajectory = mdtraj.load(data_filename("ala_small_traj.pdb"))
         self.ops_trajectory = trajectory_from_mdtraj(self.md_trajectory)
         # output of f.pairs(f.select_Backbone()) in the pyemma_generator
@@ -27,7 +27,7 @@ class TestPyEMMAFeaturizerCV(object):
         self.storage = paths.Storage('delete.nc', 'w')
         self.fname = self.storage.filename
 
-    def teardown(self):
+    def teardown_method(self):
         fname = self.fname
         if self.storage.isopen():
             self.storage.close()

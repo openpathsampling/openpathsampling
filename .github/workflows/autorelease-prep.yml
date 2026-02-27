@@ -1,9 +1,10 @@
-# File vencdored from Autorelease; specific version information should be in
-# the INSTALL_AUTORELEASE variable in autorelease-default-env.sh
-name: "Autorelease"
+# Vendored from Autorelease 0.6.1
+# Update by updating Autorelease and running `autorelease vendor actions`
+name: "Autorelease testpypi"
 on:
   pull_request:
     branches:
+      # TODO: this should come from yaml conf
       - stable
 
 defaults:
@@ -12,11 +13,14 @@ defaults:
 
 jobs:
   deploy_testpypi:
+    permissions:
+      id-token: write
+    if: ${{ github.repository == 'openpathsampling/openpathsampling' }}
     runs-on: ubuntu-latest
     name: "Deployment test"
     steps:
-      - uses: actions/checkout@v2
-      - uses: actions/setup-python@v2
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
         with:
           python-version: "3.x"
       - run: |  # TODO: move this to an action
@@ -41,18 +45,18 @@ jobs:
           python setup.py sdist bdist_wheel
           twine check dist/*
         name: "Build and check package"
-      - uses: pypa/gh-action-pypi-publish@master
+      - uses: pypa/gh-action-pypi-publish@release/v1
         with:
-          password: ${{ secrets.testpypi_password }}
           repository_url: https://test.pypi.org/legacy/
         name: "Deploy to testpypi"
   test_testpypi:
+    if: ${{ github.repository == 'openpathsampling/openpathsampling' }}
     runs-on: ubuntu-latest
     name: "Test deployed"
     needs: deploy_testpypi
     steps:
-      - uses: actions/checkout@v2
-      - uses: actions/setup-python@v2
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
         with:
           python-version: "3.x"
       - run: |  # TODO: move this to an action

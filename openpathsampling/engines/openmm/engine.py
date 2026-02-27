@@ -5,6 +5,7 @@ from openpathsampling.integration_tools import unit as u
 
 from openpathsampling.engines import DynamicsEngine, SnapshotDescriptor
 from openpathsampling.engines.openmm import tools
+from openpathsampling.exports.trajectories import TRRTrajectoryWriter
 from .snapshot import Snapshot
 import numpy as np
 
@@ -257,6 +258,9 @@ class OpenMMEngine(DynamicsEngine):
             del self._simulation.context
             self._simulation = None
 
+    def _default_trajectory_writer(self):
+        return TRRTrajectoryWriter()
+
     def initialize(self, platform=None):
         """
         Create the final OpenMMEngine
@@ -286,11 +290,19 @@ class OpenMMEngine(DynamicsEngine):
                     platformProperties=self.openmm_properties
                 )
             elif platform is None:
+                # as of OpenMM 8.1, we can't give an empty props dict when
+                # platform is None. This will still raise the internal
+                # OpenMM error is platform is None and properties are
+                # provided.
+                openmm_props = self.openmm_properties
+                if openmm_props == {}:
+                    openmm_props = None
+
                 self._simulation = openmm.app.Simulation(
                     topology=self.topology.mdtraj.to_openmm(),
                     system=self.system,
                     integrator=self.integrator,
-                    platformProperties=self.openmm_properties
+                    platformProperties=openmm_props,
                 )
             else:
                 self._simulation = openmm.app.Simulation(

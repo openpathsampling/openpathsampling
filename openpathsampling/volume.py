@@ -418,6 +418,17 @@ class CVDefinedVolume(Volume):
         val = self.collectivevariable(snapshot)
         if self._cv_returns_iterable is None:
             self._cv_returns_iterable = self._is_iterable(val)
+
+        # NumPy >= 2.0 (e.g., 2.4.2 in CI) no longer allows __float__ for
+        # non-0D ndarrays, so we explicitly scalarize only size-1 arrays here.
+        if isinstance(val, np.ndarray):
+            if val.size == 1:
+                return float(val.item())
+
+            raise TypeError(
+                "only 0-dimensional arrays can be converted to Python scalars"
+            )
+
         return val.__float__()
 
     def __call__(self, snapshot):
@@ -429,7 +440,7 @@ class CVDefinedVolume(Volume):
         if self.lambda_min != float('-inf') and self.lambda_min > l:
             return False
 
-        if self.lambda_min != float('inf') and self.lambda_max <= l:
+        if self.lambda_max != float('inf') and self.lambda_max <= l:
             return False
 
         return True

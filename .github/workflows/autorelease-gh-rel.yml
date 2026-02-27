@@ -1,18 +1,22 @@
-name: Autorelease
+# Vendored from Autorelease 0.6.1
+# Update by updating Autorelease and running `autorelease vendor actions`
+name: "Autorelease Release"
 on:
   push:
     branches:
+      # TODO: this should come from yaml conf
       - stable
 
 jobs:
   release-gh:
+    if: ${{ github.repository == 'openpathsampling/openpathsampling' }}
     runs-on: ubuntu-latest
     name: "Cut release"
     steps:
-      - uses: actions/checkout@v2
-      - uses: actions/setup-python@v2
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
         with:
-          python-version: "3.7"
+          python-version: "3.x"
       - run: |  # TODO: move this to an action
           source ./.github/workflows/autorelease-default-env.sh
           if [ -f "autorelease-env.sh" ]; then
@@ -31,3 +35,4 @@ jobs:
           autorelease-release --project $PROJECT --version $VERSION --token $AUTORELEASE_TOKEN
         env:
           AUTORELEASE_TOKEN: ${{ secrets.AUTORELEASE_TOKEN }}
+        name: "Cut release"

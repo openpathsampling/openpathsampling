@@ -18,11 +18,11 @@ jobs:
     steps:
       - uses: actions/checkout@v2
       - uses: actions/setup-python@v2
-      - uses: conda-incubator/setup-miniconda@v2
+      - uses: conda-incubator/setup-miniconda@v3
         with:
           auto-update-conda: true
-          python-version: "3.9"
-          miniforge-variant: Mambaforge
+          python-version: "3.11"
+          miniforge-version: latest
       - name: "Install requirements"
         run: source devtools/conda_install_reqs.sh
       - name: "Install OPS"

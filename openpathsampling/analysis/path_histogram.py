@@ -364,6 +364,10 @@ class PathDensityHistogram(PathHistogram):
         )
         self.cvs = cvs
 
+    def _add_ops_trajectory(self, trajectory, weight):
+        cv_traj = [cv(trajectory) for cv in self.cvs]
+        self.add_trajectory(list(zip(*cv_traj)), weight)
+
     def add_data_to_histogram(self, trajectories, weights=None):
         """Adds data to the internal histogram counter.
 
@@ -387,8 +391,7 @@ class PathDensityHistogram(PathHistogram):
 
         # TODO: add something so that we don't recalc the same traj twice
         for (traj, w) in self.progress(list(zip(trajectories, weights))):
-            cv_traj = [cv(traj) for cv in self.cvs]
-            self.add_trajectory(list(zip(*cv_traj)), w)
+            self._add_ops_trajectory(traj, w)
 
         return self._histogram.copy()
 
