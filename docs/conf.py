@@ -20,6 +20,11 @@ from importlib.metadata import PackageNotFoundError, version as get_version
 # we use these to get the version
 import packaging.version
 
+# Ensure local source tree is imported before any installed package.
+DOCS_DIR = os.path.abspath(os.path.dirname(__file__))
+REPO_ROOT = os.path.abspath(os.path.join(DOCS_DIR, ".."))
+sys.path.insert(0, REPO_ROOT)
+
 import openpathsampling
 
 import sphinx_rtd_theme
@@ -40,7 +45,6 @@ else:
 # documentation root, use os.path.abspath to make it absolute, like shown here.
 
 #sys.path.insert(0, os.path.abspath('.'))
-sys.path.insert(0,os.path.abspath('../openpathsampling/'))
 #sys.path.append(os.path.abspath('_themes'))
 
 # -- Preparing the CLI docs -----------------------------------------------
