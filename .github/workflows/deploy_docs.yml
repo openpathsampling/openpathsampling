@@ -15,24 +15,26 @@ jobs:
   docs:
     runs-on: ubuntu-latest
     name: "docs"
+    env:
+      CONDA_PY: "3.12"
     steps:
       - uses: actions/checkout@v2
       - uses: actions/setup-python@v2
       - uses: conda-incubator/setup-miniconda@v3
         with:
           auto-update-conda: true
-          python-version: "3.11"
+          python-version: "3.12"
           miniforge-version: latest
       - name: "Install requirements"
         run: source devtools/conda_install_reqs.sh
-      - name: "Install OPS"
-        run: |
-          python -m pip install --no-deps -e .
-          python -c "import openpathsampling"
       - name: "Install doc tools"
         run: |
           python -m pip install numpydoc s3cmd
           conda install -y -c conda-forge --file docs/requirements.txt
+      - name: "Install OPS"
+        run: |
+          python -m pip install --no-deps -e .
+          python -c "import openpathsampling"
       - name: "Versions"
         run: conda list
       - name: "Build docs"
@@ -48,5 +50,4 @@ jobs:
         env:
           AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
           AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-
 
