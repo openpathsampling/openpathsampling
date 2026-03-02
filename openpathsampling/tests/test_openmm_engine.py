@@ -83,6 +83,13 @@ class TestOpenMMEngine(object):
         )
         integrator.setConstraintTolerance(0.00001)
 
+        uninitialized_integrator = mm.LangevinIntegrator(
+            300*u.kelvin,
+            old_div(1.0, u.picoseconds),
+            2.0*u.femtoseconds
+        )
+        uninitialized_integrator.setConstraintTolerance(0.00001)
+
         # Engine options
         options = {
             'n_steps_per_frame': 2,
@@ -93,6 +100,13 @@ class TestOpenMMEngine(object):
             template.topology,
             system,
             integrator,
+            options=options
+        )
+
+        self.uninitialized_engine = peng.Engine(
+            template.topology,
+            system,
+            uninitialized_integrator,
             options=options
         )
 
@@ -296,3 +310,68 @@ class TestOpenMMEngine(object):
         assert len(reloaded) == len(traj)
         npt.assert_allclose(reloaded.xyz, traj.xyz)
 
+    def test_serialization_cycle(self):
+        integrator = mm.LangevinIntegrator(
+            300*u.kelvin,
+            old_div(1.0, u.picoseconds),
+            2.0*u.femtoseconds
+        )
+        integrator.setConstraintTolerance(0.00001)
+        engine = peng.Engine(
+            template.topology,
+            system,
+            integrator,
+            options={'n_steps_per_frame': 2, 'n_frames_max': 5},
+            platform='CPU'
+        )
+
+        dct = engine.to_dict()
+        rebuilt = peng.Engine.from_dict(dct)
+        dct2 = rebuilt.to_dict()
+        assert dct == dct2
+        assert dct2['platform'] == 'CPU'
+
+    def test_initialize_uses_exact_platform_object(self):
+        platform_obj = mm.Platform.getPlatformByName('CPU')
+        self.uninitialized_engine.initialize(platform=platform_obj)
+
+        assert self.uninitialized_engine.platform == 'CPU'
+        assert self.uninitialized_engine._platform is None
+        assert self.uninitialized_engine.to_dict()['platform'] is None
+
+    def test_from_dict_without_platform_key_is_backward_compatible(self):
+        serialized = self.engine.to_dict()
+        del serialized['platform']
+
+        restored = peng.Engine.from_dict(serialized)
+        assert restored is not None
+        assert restored.platform is None
+
+    def test_initialize_uses_stored_properties_when_override_is_none(
+            self):
+        self.uninitialized_engine.openmm_properties = {'__ops_bad__': '1'}
+        with pytest.raises(Exception, match='Illegal property name'):
+            self.uninitialized_engine.initialize(
+                platform='CPU',
+                openmm_properties=None
+            )
+
+    def test_initialize_explicit_properties_override_stored(self):
+        self.uninitialized_engine.openmm_properties = {'__ops_bad__': '1'}
+        self.uninitialized_engine.initialize(
+            platform='CPU',
+            openmm_properties={}
+        )
+        assert isinstance(self.uninitialized_engine.simulation, mm.app.Simulation)
+        assert self.uninitialized_engine.platform == 'CPU'
+
+    def test_initialize_nonempty_properties_without_platform_raises(self):
+        self.uninitialized_engine.openmm_properties = {'Threads': '1'}
+        with pytest.raises(ValueError, match='no platform was specified'):
+            self.uninitialized_engine.initialize()
+
+    def test_initialize_empty_properties_without_platform_is_valid(self):
+        self.uninitialized_engine.openmm_properties = {}
+        self.uninitialized_engine.initialize()
+        assert isinstance(self.uninitialized_engine.simulation, mm.app.Simulation)
+        assert self.uninitialized_engine.platform is not None
