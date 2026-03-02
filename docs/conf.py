@@ -13,17 +13,18 @@
 # serve to show the default.
 
 import sys
-import os
 import shutil
+from contextlib import chdir
+from pathlib import Path
 from importlib.metadata import PackageNotFoundError, version as get_version
 
 # we use these to get the version
 import packaging.version
 
 # Ensure local source tree is imported before any installed package.
-DOCS_DIR = os.path.abspath(os.path.dirname(__file__))
-REPO_ROOT = os.path.abspath(os.path.join(DOCS_DIR, ".."))
-sys.path.insert(0, REPO_ROOT)
+DOCS_DIR = Path(__file__).resolve().parent
+REPO_ROOT = DOCS_DIR.parent
+sys.path.insert(0, str(REPO_ROOT))
 
 import openpathsampling
 
@@ -41,26 +42,19 @@ else:
     gen_cli_docs = paths_cli.compiling.gendocs.do_main
 
 # If extensions (or modules to document with autodoc) are in another directory,
-# add these directories to sys.path here. If the directory is relative to the
-# documentation root, use os.path.abspath to make it absolute, like shown here.
+# add these directories to sys.path here.
 
-#sys.path.insert(0, os.path.abspath('.'))
-#sys.path.append(os.path.abspath('_themes'))
+#sys.path.insert(0, str(DOCS_DIR))
+#sys.path.append(str(DOCS_DIR / '_themes'))
 
 # -- Preparing the CLI docs -----------------------------------------------
-orig_cwd = os.getcwd()
-try:
-    mydir = os.path.dirname(__file__)
-    cli_inp_dir = os.path.abspath(os.path.join(mydir, "cli/compile/input/"))
-    os.chdir(cli_inp_dir)
+with chdir(DOCS_DIR / "cli" / "compile" / "input"):
     gen_cli_docs("categories.yml", stdout=False)
-finally:
-    os.chdir(orig_cwd)
 
 # -- Copying examples over into the docs/examples -------------------------
 try:
-    shutil.copytree(os.path.abspath("../examples/alanine_dipeptide_tps"),
-                    os.path.abspath("examples/alanine_dipeptide_tps"))
+    shutil.copytree(REPO_ROOT / "examples" / "alanine_dipeptide_tps",
+                    DOCS_DIR / "examples" / "alanine_dipeptide_tps")
 except OSError:
     pass   # there should be a backup here....
 
@@ -112,7 +106,7 @@ pandoc_from = ['markdown', 'mediawiki']
 autosummary_generate = True
 autodoc_default_flags = ['members', 'inherited-members', 'imported-members']
 
-sys.path.insert(0, os.path.abspath('sphinxext'))
+sys.path.insert(0, str(DOCS_DIR / 'sphinxext'))
 extensions.append('notebook_sphinxext')
 extensions.append('pandoc_sphinxext')
 
