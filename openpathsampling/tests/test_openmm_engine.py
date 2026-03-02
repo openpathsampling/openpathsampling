@@ -339,6 +339,27 @@ class TestOpenMMEngine(object):
         assert self.uninitialized_engine._platform is None
         assert self.uninitialized_engine.to_dict()['platform'] is None
 
+    def test_bad_platform_get_name_raises_typeerror(self):
+        class BadPlatform(object):
+            def getName(self):
+                raise TypeError("bad getName")
+
+        integrator = mm.LangevinIntegrator(
+            300*u.kelvin,
+            old_div(1.0, u.picoseconds),
+            2.0*u.femtoseconds
+        )
+        integrator.setConstraintTolerance(0.00001)
+
+        with pytest.raises(TypeError, match='platform must be None'):
+            peng.Engine(
+                template.topology,
+                system,
+                integrator,
+                options={'n_steps_per_frame': 2, 'n_frames_max': 5},
+                platform=BadPlatform()
+            )
+
     def test_from_dict_without_platform_key_is_backward_compatible(self):
         serialized = self.engine.to_dict()
         del serialized['platform']
