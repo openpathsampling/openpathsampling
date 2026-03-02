@@ -330,15 +330,12 @@ class OpenMMEngine(DynamicsEngine):
             }
 
             if effective_platform is None:
-                if not effective_properties:
-                    openmm_props = None
-                else:
-                    openmm_props = effective_properties
+                if effective_properties:
                     raise ValueError(
                         "OpenMM platform-specific properties were provided, "
                         "but no platform was specified."
                     )
-                simulation_kwargs['platformProperties'] = openmm_props
+                simulation_kwargs['platformProperties'] = None
             else:
                 if isinstance(effective_platform, str):
                     resolved_platform = openmm.Platform.getPlatformByName(
