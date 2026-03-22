@@ -66,6 +66,11 @@ def test_scalarize_singletons_to_float():
     assert not isinstance(scalarized, np.ndarray)
     assert isinstance(scalarized, float)
 
+def test_scalarize_singletons_non_0d_singleton_to_float():
+    scalarized = scalarize_singletons(np.array([[1.0]]))
+    assert not isinstance(scalarized, np.ndarray)
+    assert isinstance(scalarized, float)
+
 def test_wrap_numpy():
     for inp in [1, [1, 2]]:
         assert isinstance(wrap_numpy(inp), np.ndarray)
