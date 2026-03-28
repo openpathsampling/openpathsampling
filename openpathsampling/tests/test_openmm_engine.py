@@ -339,10 +339,10 @@ class TestOpenMMEngine(object):
         assert self.uninitialized_engine._platform is None
         assert self.uninitialized_engine.to_dict()['platform'] is None
 
-    def test_bad_platform_get_name_raises_typeerror(self):
-        class BadPlatform(object):
+    def test_duck_typed_platform_like_object_raises_typeerror(self):
+        class PlatformLikeObject(object):
             def getName(self):
-                raise TypeError("bad getName")
+                return 'CPU'
 
         integrator = mm.LangevinIntegrator(
             300*u.kelvin,
@@ -357,7 +357,7 @@ class TestOpenMMEngine(object):
                 system,
                 integrator,
                 options={'n_steps_per_frame': 2, 'n_frames_max': 5},
-                platform=BadPlatform()
+                platform=PlatformLikeObject()
             )
 
     def test_from_dict_without_platform_key_is_backward_compatible(self):

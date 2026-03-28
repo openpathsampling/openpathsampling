@@ -242,19 +242,19 @@ class OpenMMEngine(DynamicsEngine):
 
     @staticmethod
     def _normalize_platform(platform):
-        if platform is None:
-            return None
-
-        if isinstance(platform, str):
-            return platform
-
-        try:
-            return platform.getName()
-        except (AttributeError, TypeError) as err:
-            raise TypeError(
-                "platform must be None, a platform name string, or an "
-                "openmm.Platform instance"
-            ) from err
+        match platform:
+            case None:
+                return None
+            case str() as name:
+                return name
+            case candidate if isinstance(candidate, openmm.Platform):
+                return candidate.getName()
+            case _:
+                raise TypeError(
+                    "platform must be None, a platform name string, or an "
+                    "openmm.Platform instance. "
+                    f"Got {type(platform)} instead"
+                )
 
     @property
     def simulation(self):
