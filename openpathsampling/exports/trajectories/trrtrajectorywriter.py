@@ -11,6 +11,10 @@ class TRRTrajectoryWriter(TrajectoryWriter):
         if not HAS_MDTRAJ:  # -no-cov-
             raise ImportError("MDTraj is not available")
 
+    @property
+    def ext(self):
+        return "trr"
+
     def _write(self, trajectory, filename):
         # this uses some "unofficial" MDTraj API
         import mdtraj as md
