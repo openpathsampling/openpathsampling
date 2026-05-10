@@ -351,7 +351,7 @@ class TestOpenMMEngine(object):
         )
         integrator.setConstraintTolerance(0.00001)
 
-        with pytest.raises(TypeError, match='platform must be None'):
+        with pytest.raises(TypeError, match=r'platform must be None.*PlatformLikeObject'):
             peng.Engine(
                 template.topology,
                 system,
