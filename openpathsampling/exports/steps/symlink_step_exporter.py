@@ -112,7 +112,7 @@ class SymLinkStepExporter:
         ----------
         step : Step
            The step containing the sample.
-       sample : Sample
+        sample : Sample
            The trial sample to export.
         """
         self._export_sample_symlink(self.trial_pattern, step, sample)
