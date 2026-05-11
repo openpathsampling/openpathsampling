@@ -79,7 +79,8 @@ class OpenMMEngine(DynamicsEngine):
             system,
             integrator,
             openmm_properties=None,
-            options=None):
+            options=None,
+            platform=None):
         """
         Parameters
         ----------
@@ -95,8 +96,6 @@ class OpenMMEngine(DynamicsEngine):
             keys include GPU floating point precision.
             Note that by default the engine selects the fastest currently
             available OpenMM platform.
-            If you want to specify the platform you will have to call
-            `engine.initialize(platform)` after creating the engine.
         options : dict
             a dictionary that provides additional settings for the OPS engine.
             Allowed are
@@ -106,6 +105,11 @@ class OpenMMEngine(DynamicsEngine):
                 'n_frames_max' : int, default: 5000,
                     the maximal number of frames allowed for a returned
                     trajectory object
+        platform : str or :class:`openmm.Platform` or None
+            optional default platform for creating the OpenMM simulation.
+            This value is used by ``initialize`` and serialization. The
+            ``.platform`` property reflects the initialized simulation context
+            and remains ``None`` until initialization occurs.
 
         Notes
         -----
@@ -138,6 +142,8 @@ class OpenMMEngine(DynamicsEngine):
             openmm_properties = {}
 
         self.openmm_properties = openmm_properties
+        self._normalize_platform(platform)  # validate serializability
+        self._platform = platform
 
         # set no cached snapshot
         self._current_snapshot = None
@@ -202,7 +208,8 @@ class OpenMMEngine(DynamicsEngine):
             self.system,
             integrator,
             openmm_properties=openmm_properties,
-            options=new_options)
+            options=new_options,
+            platform=self._platform)
 
         if self._simulation is not None and \
                 integrator is self.integrator and \
@@ -220,13 +227,34 @@ class OpenMMEngine(DynamicsEngine):
     @property
     def platform(self):
         """
-        str : Return the name of the currently used platform
+        str or None : Return the name of the currently used platform.
+
+        This value is populated from the simulation context and is ``None``
+        until the simulation has been initialized. Configured platform values
+        may exist before initialization for serialization, but are not exposed
+        through this property.
 
         """
         if self._simulation is not None:
             return self._simulation.context.getPlatform().getName()
         else:
             return None
+
+    @staticmethod
+    def _normalize_platform(platform):
+        match platform:
+            case None:
+                return None
+            case str() as name:
+                return name
+            case candidate if isinstance(candidate, openmm.Platform):
+                return candidate.getName()
+            case _:
+                raise TypeError(
+                    "platform must be None, a platform name string, or an "
+                    "openmm.Platform instance. "
+                    f"Got {type(platform)} instead"
+                )
 
     @property
     def simulation(self):
@@ -261,7 +289,7 @@ class OpenMMEngine(DynamicsEngine):
     def _default_trajectory_writer(self):
         return TRRTrajectoryWriter()
 
-    def initialize(self, platform=None):
+    def initialize(self, platform=None, openmm_properties=None):
         """
         Create the final OpenMMEngine
 
@@ -270,6 +298,9 @@ class OpenMMEngine(DynamicsEngine):
         platform : str or :class:`openmm.Platform` or None
             either a string with a name of the platform or a platform object
             if None it will default to the fastest currently available platform
+        openmm_properties : dict or None
+            optional platform properties for this initialize call. If ``None``
+            the engine-stored ``openmm_properties`` are used.
 
         Notes
         -----
@@ -281,37 +312,42 @@ class OpenMMEngine(DynamicsEngine):
         """
 
         if self._simulation is None:
-            if type(platform) is str:
-                self._simulation = openmm.app.Simulation(
-                    topology=self.topology.mdtraj.to_openmm(),
-                    system=self.system,
-                    integrator=self.integrator,
-                    platform=openmm.Platform.getPlatformByName(platform),
-                    platformProperties=self.openmm_properties
-                )
-            elif platform is None:
-                # as of OpenMM 8.1, we can't give an empty props dict when
-                # platform is None. This will still raise the internal
-                # OpenMM error is platform is None and properties are
-                # provided.
-                openmm_props = self.openmm_properties
-                if openmm_props == {}:
-                    openmm_props = None
-
-                self._simulation = openmm.app.Simulation(
-                    topology=self.topology.mdtraj.to_openmm(),
-                    system=self.system,
-                    integrator=self.integrator,
-                    platformProperties=openmm_props,
-                )
+            if platform is None:
+                effective_platform = self._platform
             else:
-                self._simulation = openmm.app.Simulation(
-                    topology=self.topology.mdtraj.to_openmm(),
-                    system=self.system,
-                    integrator=self.integrator,
-                    platform=platform,
-                    platformProperties=self.openmm_properties
-                )
+                self._normalize_platform(platform)  # validate serializability
+                effective_platform = platform
+
+            if openmm_properties is None:
+                effective_properties = self.openmm_properties
+            else:
+                effective_properties = openmm_properties
+
+            simulation_kwargs = {
+                'topology': self.topology.mdtraj.to_openmm(),
+                'system': self.system,
+                'integrator': self.integrator,
+            }
+
+            if effective_platform is None:
+                if effective_properties:
+                    raise ValueError(
+                        "OpenMM platform-specific properties were provided, "
+                        "but no platform was specified."
+                    )
+                simulation_kwargs['platformProperties'] = None
+            else:
+                if isinstance(effective_platform, str):
+                    resolved_platform = openmm.Platform.getPlatformByName(
+                        effective_platform
+                    )
+                else:
+                    resolved_platform = effective_platform
+
+                simulation_kwargs['platform'] = resolved_platform
+                simulation_kwargs['platformProperties'] = effective_properties
+
+            self._simulation = openmm.app.Simulation(**simulation_kwargs)
 
             logger.info(
                 'Initialized OpenMM engine using platform `%s`' %
@@ -333,7 +369,8 @@ class OpenMMEngine(DynamicsEngine):
             'integrator_xml': integrator_xml,
             'topology': self.topology,
             'options': self.options,
-            'properties': self.openmm_properties
+            'properties': self.openmm_properties,
+            'platform': self._normalize_platform(self._platform)
         }
 
     @classmethod
@@ -343,6 +380,7 @@ class OpenMMEngine(DynamicsEngine):
         topology = dct['topology']
         options = dct['options']
         properties = dct['properties']
+        platform = dct.get('platform', None)
 
         # we need to have str as keys
         properties = {str(key): str(value)
@@ -355,7 +393,8 @@ class OpenMMEngine(DynamicsEngine):
             system=openmm.XmlSerializer.deserialize(system_xml),
             integrator=integrator,
             options=options,
-            openmm_properties=properties
+            openmm_properties=properties,
+            platform=platform
         )
 
     @property
