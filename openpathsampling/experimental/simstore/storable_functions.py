@@ -56,10 +56,12 @@ def _scalarize_singletons(values):
     """
     if isinstance(values, np.ndarray):
         shape = tuple(n for n in values.shape if n != 1)
+        # NumPy >= 2.0 rejects float() for non-0D ndarrays, so use item()
+        # when singleton axes collapse to a scalar.
         if shape == tuple():
-            values = values.__float__()
+            values = float(values.item())
         else:
-            values.shape = shape
+            values = np.reshape(values, shape)
 
         # shape = values.shape
         # if len(shape) > 1 and shape[1] == 1:
