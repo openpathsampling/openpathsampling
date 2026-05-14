@@ -71,6 +71,10 @@ class SymLinkStepExporter:
         if self.writer is not None:
             writer = self.writer
         else:
+            if len(sample.trajectory) == 0:
+                raise ValueError(
+                    "Cannot determine writer from an empty trajectory"
+                )
             engines = collections.Counter([s.engine for s in
                                           sample.trajectory])
             engine = engines.most_common(1)[0][0]

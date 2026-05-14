@@ -141,6 +141,17 @@ class TestSymLinkStepExporter:
             default_writer = engine2._default_trajectory_writer()
             assert result.__class__ is default_writer.__class__
 
+    def test_get_writer_empty_trajectory_error(self):
+        exporter = SymLinkStepExporter(writer=None)
+        sample = Mock()
+        sample.trajectory = []
+
+        with pytest.raises(
+            ValueError,
+            match="Cannot determine writer from an empty trajectory"
+        ):
+            exporter._get_writer(sample)
+
     def test_substitution_dict(self, shooting_step):
         exporter = SymLinkStepExporter(writer=self.mock_writer)
 
