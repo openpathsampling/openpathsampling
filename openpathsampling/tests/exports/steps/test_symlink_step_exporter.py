@@ -1,6 +1,6 @@
 import pytest
-import os
 import pathlib
+import contextlib
 import openpathsampling as paths
 from unittest.mock import Mock
 
@@ -176,10 +176,7 @@ class TestSymLinkStepExporter:
         assert tmp_path.is_dir()
         assert len(list(tmp_path.iterdir())) == 0
 
-        original_cwd = os.getcwd()
-        os.chdir(tmp_path)
-
-        try:
+        with contextlib.chdir(tmp_path):
             exporter.export_trial_sample(step, sample)
 
             subs_dict = exporter._substitution_dict(step, sample)
@@ -192,9 +189,6 @@ class TestSymLinkStepExporter:
 
             assert pathlib.Path(raw_data_path).samefile(trial_path)
 
-        finally:
-            os.chdir(original_cwd)
-
     def test_export_active_sample(self, shooting_step, tmp_path):
         step = shooting_step
         sample = step.active[0]
@@ -203,10 +197,7 @@ class TestSymLinkStepExporter:
             base_dir=tmp_path, writer=self.mock_writer
         )
 
-        original_cwd = os.getcwd()
-        os.chdir(tmp_path)
-
-        try:
+        with contextlib.chdir(tmp_path):
             exporter.export_active_sample(step, sample)
 
             subs_dict = exporter._substitution_dict(step, sample)
@@ -219,9 +210,6 @@ class TestSymLinkStepExporter:
 
             assert pathlib.Path(raw_data_path).samefile(active_path)
 
-        finally:
-            os.chdir(original_cwd)
-
     def test_export_raw_sample(self, shooting_step, tmp_path):
         step = shooting_step
         sample = step.active[0]
@@ -230,10 +218,7 @@ class TestSymLinkStepExporter:
             base_dir=tmp_path, writer=self.mock_writer
         )
 
-        original_cwd = os.getcwd()
-        os.chdir(tmp_path)
-
-        try:
+        with contextlib.chdir(tmp_path):
             exporter.export_raw_sample(step, sample)
 
             subs_dict = exporter._substitution_dict(step, sample)
@@ -242,9 +227,6 @@ class TestSymLinkStepExporter:
 
             assert pathlib.Path(raw_data_path).is_file()
             assert not pathlib.Path(raw_data_path).is_symlink()
-
-        finally:
-            os.chdir(original_cwd)
 
     @pytest.mark.parametrize("step_type", ["shooting", "repex",
                                            "pathreversal"])
@@ -269,10 +251,7 @@ class TestSymLinkStepExporter:
             base_dir=tmp_path, writer=self.mock_writer
         )
 
-        original_cwd = os.getcwd()
-        os.chdir(tmp_path)
-
-        try:
+        with contextlib.chdir(tmp_path):
             assert actual_trials == expected_trials
 
             exporter.export_step(step)
@@ -301,9 +280,6 @@ class TestSymLinkStepExporter:
             for active_file in active_files:
                 assert active_file.is_symlink()
 
-        finally:
-            os.chdir(original_cwd)
-
 
 def test_export_steps(all_steps, tmp_path):
     mock_writer = Mock()
@@ -313,10 +289,7 @@ def test_export_steps(all_steps, tmp_path):
         pathlib.Path(filename).touch()
     mock_writer.side_effect = mock_write_func
 
-    original_cwd = os.getcwd()
-    os.chdir(tmp_path)
-
-    try:
+    with contextlib.chdir(tmp_path):
         export_steps(all_steps, writer=mock_writer)
 
         assert pathlib.Path("raw_data").exists()
@@ -356,9 +329,6 @@ def test_export_steps(all_steps, tmp_path):
             assert active_dir.exists()
             active_files = list(active_dir.glob(f"*.{writer_db3.ext}"))
             assert len(active_files) == 0
-
-    finally:
-        os.chdir(original_cwd)
 
 
 def test_default_raw_pattern_paths(shooting_step):
