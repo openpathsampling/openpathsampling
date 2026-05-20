@@ -9,11 +9,16 @@ class MDTrajTrajectoryWriter(TrajectoryWriter):
     Note that this will not include velocities, and therefore isn't suitable
     for saving data that could be used in a restart.
     """
-    def __init__(self, mdtraj_selection=None):
+    def __init__(self, ext, mdtraj_selection=None):
+        self._ext = ext
         if not HAS_MDTRAJ:  # -no-cov-
             raise ImportError("MDTraj is not available")
 
         self.mdtraj_selection = mdtraj_selection
+
+    @property
+    def ext(self):
+        return self._ext
 
     def _write(self, trajectory, filename):
         mdt = trajectory.to_mdtraj()

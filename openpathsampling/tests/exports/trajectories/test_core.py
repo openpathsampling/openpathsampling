@@ -103,3 +103,6 @@ class TestSimStoreTrajectoryWriter(TrajectoryWriterTestBase):
         trajectory = request.getfixturevalue("ad_trajectory")
         with pytest.raises(RuntimeError, match="monkey-patch"):
             self.writer(trajectory, tmp_path / "test.db")
+
+    def test_ext(self):
+        assert self.writer.ext == "db"

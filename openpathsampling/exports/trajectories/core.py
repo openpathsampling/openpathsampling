@@ -25,6 +25,11 @@ class TrajectoryWriter:
 
         self._write(trajectory, filename)
 
+    @property
+    def ext(self):
+        """The file extension used by this writer."""
+        raise NotImplementedError()
+
     def _write(self, trajectory, filename):
         """Write the trajectory to the file.
 
@@ -43,6 +48,10 @@ class SimStoreTrajectoryWriter(TrajectoryWriter):
     This is the default trajectory writer, since all engines should be able
     to use it.
     """
+    @property
+    def ext(self):
+        return "db"
+
     def _write(self, trajectory, filename):
         from openpathsampling.experimental.storage import Storage
         from openpathsampling.experimental.storage.monkey_patches import (
