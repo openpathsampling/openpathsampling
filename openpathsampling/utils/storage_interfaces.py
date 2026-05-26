@@ -174,21 +174,34 @@ class LocalFileStorageInterface(StorageInterface):
     def __init__(self, root):
         self.root = pathlib.Path(root)
         self.root.mkdir(parents=True, exist_ok=True)
+        self.root = self.root.resolve()
 
     def _local_path(self, storage_label):
         storage_label = pathlib.Path(storage_label)
-        if storage_label.is_absolute():
-            raise ValueError("Storage labels must be relative paths")
-        return self.root / storage_label
+        if storage_label.anchor:
+            raise ValueError("Storage labels must be unanchored relative paths")
+
+        local_path = (self.root / storage_label).resolve(strict=False)
+        try:
+            local_path.relative_to(self.root)
+        except ValueError as exc:
+            raise ValueError("Storage labels must resolve inside the storage "
+                             "root") from exc
+        return local_path
 
     def _check_can_write(self, storage_label, force):
-        if not force and storage_label in self:
-            raise FileExistsError(f"Storage label {storage_label} "
-                                  "already exists")
+        local_path = self._local_path(storage_label)
+        if local_path.exists():
+            if local_path.is_dir():
+                raise ValueError(f"Storage label {storage_label} refers to an "
+                                 "existing directory")
+            if not force:
+                raise FileExistsError(f"Storage label {storage_label} "
+                                      "already exists")
+        return local_path
 
     def store(self, storage_label, source_path, *, force=False):
-        self._check_can_write(storage_label, force)
-        local_path = self._local_path(storage_label)
+        local_path = self._check_can_write(storage_label, force)
         local_path.parent.mkdir(parents=True, exist_ok=True)
         shutil.copyfile(source_path, local_path)
 
@@ -217,16 +230,14 @@ class LocalFileStorageInterface(StorageInterface):
         if pathlib.Path(source_path).is_dir():
             raise ValueError(f"'{source_path}' is a directory, and can't "
                              "be transferred.")
-        self._check_can_write(storage_label, force)
-        target_path = self._local_path(storage_label)
+        target_path = self._check_can_write(storage_label, force)
         target_path.parent.mkdir(parents=True, exist_ok=True)
         if force and target_path.exists():
             os.remove(target_path)
         shutil.move(source_path, target_path)
 
     def store_bytes(self, storage_label, data, *, force=False):
-        self._check_can_write(storage_label, force)
-        local_path = self._local_path(storage_label)
+        local_path = self._check_can_write(storage_label, force)
         local_path.parent.mkdir(parents=True, exist_ok=True)
         with builtins.open(local_path, mode='wb') as f:
             f.write(data)
@@ -263,13 +274,13 @@ class LocalFileStorageInterface(StorageInterface):
         write_mode = _mode_writes(mode)
         if not atomic:
             if write_mode:
-                self._check_can_write(storage_label, force)
+                local_path = self._check_can_write(storage_label, force)
                 local_path.parent.mkdir(parents=True, exist_ok=True)
             yield local_path
             return
 
         if write_mode:
-            self._check_can_write(storage_label, force)
+            local_path = self._check_can_write(storage_label, force)
             local_path.parent.mkdir(parents=True, exist_ok=True)
             suffix = suffix or local_path.suffix
             fd, tmp_path = tempfile.mkstemp(

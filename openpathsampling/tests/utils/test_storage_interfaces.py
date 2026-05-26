@@ -187,6 +187,36 @@ class TestLocalFileStorageInterface(StorageInterfaceTest):
         with open(stored_target, mode='r') as f:
             assert f.read() == "localfile contents"
 
+    def test_store_rejects_path_escape(self):
+        with pytest.raises(ValueError, match="inside the storage root"):
+            self.interface.store("../escape", self.localfile)
+
+        assert not (self.tmpdir / "escape").exists()
+
+    def test_store_rejects_symlink_escape(self):
+        outside = self.tmpdir / "outside"
+        outside.mkdir()
+        (self.interface.root / "link-out").symlink_to(outside,
+                                                       target_is_directory=True)
+
+        with pytest.raises(ValueError, match="inside the storage root"):
+            self.interface.store("link-out/escape", self.localfile)
+
+        assert not (outside / "escape").exists()
+
+    def test_store_accepts_normalized_relative_path(self):
+        stored_target = self.interface.root / "normalized/foo"
+
+        self.interface.store("nested/../normalized/foo", self.localfile)
+
+        assert stored_target.exists()
+        with open(stored_target, mode='r') as f:
+            assert f.read() == "localfile contents"
+
+    def test_store_rejects_anchored_label(self):
+        with pytest.raises(ValueError, match="unanchored relative"):
+            self.interface.store("/anchored", self.localfile)
+
     def test_as_path_direct_write_uses_final_path(self):
         stored_target = self.interface.root / "direct/foo"
         with self.interface.as_path("direct/foo", mode="wb",
@@ -220,6 +250,25 @@ class TestLocalFileStorageInterface(StorageInterfaceTest):
 
         with pytest.raises(ValueError, match="is a directory"):
             self.interface.transfer("directory", source_dir)
+
+    def test_transfer_existing_directory_target(self):
+        existing_dir = self.interface.root / "existing-dir"
+        existing_dir.mkdir()
+
+        with pytest.raises(ValueError, match="existing directory"):
+            self.interface.transfer("existing-dir", self.localfile)
+
+        assert self.localfile.exists()
+
+    def test_transfer_existing_directory_target_force(self):
+        existing_dir = self.interface.root / "existing-dir"
+        existing_dir.mkdir()
+
+        with pytest.raises(ValueError, match="existing directory"):
+            self.interface.transfer("existing-dir", self.localfile,
+                                    force=True)
+
+        assert self.localfile.exists()
 
     def test_list_directory_not_directory(self):
         with pytest.raises(ValueError, match="is not a directory"):
