@@ -2,6 +2,9 @@ import pytest
 
 from openpathsampling.exports.trajectories.mdtrajtrajectorywriter import *
 from openpathsampling.integration_tools import HAS_MDTRAJ
+from openpathsampling.utils.storage_interfaces import (
+    LocalFileStorageInterface, MemoryStorageInterface
+)
 import numpy.testing as npt
 
 def test_mdtraj_trajectory_writer(ad_trajectory, ad_grofile, tmp_path):
@@ -15,6 +18,30 @@ def test_mdtraj_trajectory_writer(ad_trajectory, ad_grofile, tmp_path):
     writer(ad_trajectory, outfile)
     assert outfile.exists()
 
+    reloaded = md.load(str(outfile), top=ad_grofile)
+    assert len(reloaded) == len(ad_trajectory)
+    assert reloaded.xyz.shape == ad_trajectory.xyz.shape
+    npt.assert_allclose(reloaded.xyz, ad_trajectory.xyz, atol=1e-3)
+
+
+@pytest.mark.parametrize("storage_type", ["memory", "local"])
+def test_mdtraj_trajectory_writer_storage(ad_trajectory, ad_grofile,
+                                          storage_type, tmp_path):
+    if not HAS_MDTRAJ:
+        pytest.skip("mdtraj is not available")
+
+    import mdtraj as md
+    storage = {
+        "memory": MemoryStorageInterface(),
+        "local": LocalFileStorageInterface(tmp_path / "storage"),
+    }[storage_type]
+    writer = MDTrajTrajectoryWriter(ext="xtc")
+
+    writer.write(ad_trajectory, storage, "test.xtc")
+    assert "test.xtc" in storage
+
+    outfile = tmp_path / "test.xtc"
+    storage.load("test.xtc", outfile)
     reloaded = md.load(str(outfile), top=ad_grofile)
     assert len(reloaded) == len(ad_trajectory)
     assert reloaded.xyz.shape == ad_trajectory.xyz.shape

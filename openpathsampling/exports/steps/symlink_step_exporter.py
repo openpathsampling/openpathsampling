@@ -6,7 +6,10 @@ import os
 import collections
 import pathlib
 
-class SymLinkStepExporter:
+from .core import StepExporter
+
+
+class SymLinkStepExporter(StepExporter):
     """Export steps as raw data and symlink to the raw data.
 
     In the patterns used for raw data, trials, and active data, the
@@ -35,6 +38,12 @@ class SymLinkStepExporter:
        File pattern for the trial data symlinks.
     active_pattern : str
        File pattern for the active data symlinks.
+
+    Notes
+    -----
+    This exporter is filesystem-specific and is intended for single-process
+    export workflows. It uses best-effort existence checks to avoid duplicate
+    writes, but it does not lock files against concurrent exporters.
     """
     def __init__(
         self,
@@ -51,6 +60,15 @@ class SymLinkStepExporter:
         self.raw_data_pattern = raw_data_pattern
         self.trial_pattern = trial_pattern
         self.active_pattern = active_pattern
+
+    def _resolve_path(self, path):
+        path = pathlib.Path(path)
+        if path.is_absolute():
+            return path
+        return self.base_dir / path
+
+    def _formatted_path(self, pattern, subs_dict):
+        return self._resolve_path(pattern.format(**subs_dict))
 
     def _get_ensemble_id(self, sample):
         """Get the ensemble ID (used in file names) for a sample.
@@ -96,18 +114,18 @@ class SymLinkStepExporter:
             return
 
         subs_dict = self._substitution_dict(step, sample)
-        path = pattern.format(**subs_dict)
-        raw_data_path = self.raw_data_pattern.format(**subs_dict)
-        if not pathlib.Path(raw_data_path).exists():
+        path = self._formatted_path(pattern, subs_dict)
+        raw_data_path = self._formatted_path(self.raw_data_pattern, subs_dict)
+        if not raw_data_path.exists():
             self.export_raw_sample(step, sample)
 
-        pathlib.Path(path).parent.mkdir(parents=True, exist_ok=True)
-        symlink_path = pathlib.Path(path)
-        target_path = pathlib.Path(raw_data_path)
+        path.parent.mkdir(parents=True, exist_ok=True)
+        symlink_path = path
+        target_path = raw_data_path
         relative_target = os.path.relpath(target_path, symlink_path.parent)
 
         if not symlink_path.exists():
-            os.symlink(relative_target, path)
+            os.symlink(relative_target, symlink_path)
 
     def export_trial_sample(self, step, sample):
         """Export a symlink to the raw data for a trial sample.
@@ -144,37 +162,23 @@ class SymLinkStepExporter:
            The sample to export.
         """
         subs_dict = self._substitution_dict(step, sample)
-        raw_data_path = self.raw_data_pattern.format(**subs_dict)
-        if os.path.exists(raw_data_path):
+        raw_data_path = self._formatted_path(self.raw_data_pattern, subs_dict)
+        if raw_data_path.exists():
             return
 
         # ensure parent directory exists
-        pathlib.Path(raw_data_path).parent.mkdir(parents=True, exist_ok=True)
+        raw_data_path.parent.mkdir(parents=True, exist_ok=True)
         writer = self._get_writer(sample)
         writer(sample.trajectory, raw_data_path)
 
-    def export_step(self, step):
-        """Export a step.
-
-        Parameters
-        ----------
-        step : Step
-           The step to export.
-        """
-        for sample in step.change.trials:
-            self.export_raw_sample(step, sample)
-            self.export_trial_sample(step, sample)
-
-        for sample in step.active:
-            self.export_active_sample(step, sample)
-
 
 def export_steps(steps, writer=None, *, export_trials=True,
-                 export_active=True):
+                 export_active=True, base_dir='.'):
     trial_pattern = _DEFAULT_TRIAL_PATTERN if export_trials else None
     active_pattern = _DEFAULT_ACTIVE_PATTERN if export_active else None
     exporter = SymLinkStepExporter(
         writer=writer,
+        base_dir=base_dir,
         trial_pattern=trial_pattern,
         active_pattern=active_pattern,
     )
