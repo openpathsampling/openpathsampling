@@ -12,6 +12,32 @@ _logger = logging.getLogger(__name__)
 
 
 
+def _validate_storage_mode(mode):
+    """Validate storage-interface modes and return the base operation."""
+    valid_flags = set("rbwxa+t")
+    invalid = set(mode) - valid_flags
+    if invalid:
+        raise ValueError(f"invalid mode: {mode!r}")
+
+    repeated = [flag for flag in valid_flags if mode.count(flag) > 1]
+    if repeated:
+        raise ValueError(f"invalid mode: {mode!r}")
+
+    if 'b' not in mode or 't' in mode:
+        raise ValueError("Storage interfaces only support binary modes")
+
+    if 'a' in mode or '+' in mode:
+        raise ValueError("Storage interfaces do not support append/update "
+                         "modes")
+
+    operations = [flag for flag in "rwx" if flag in mode]
+    if len(operations) != 1:
+        raise ValueError("Storage interfaces require exactly one of read, "
+                         "write, or exclusive-create mode")
+
+    return operations[0]
+
+
 class StorageInterface(ABC):
     """Abstract treatment of a key-value-like file/object store.
 
@@ -107,10 +133,8 @@ class StorageInterface(ABC):
         Only binary modes are supported. Write modes commit on successful
         context exit; exceptions leave the storage label unchanged.
         """
-        if 'b' not in mode:
-            raise ValueError("StorageInterface.open only supports binary "
-                             "modes")
-        if _mode_writes(mode):
+        operation = _validate_storage_mode(mode)
+        if operation != 'r':
             if not force and storage_label in self:
                 raise FileExistsError(f"Storage label {storage_label} "
                                       "already exists")
@@ -134,7 +158,8 @@ class StorageInterface(ABC):
         fd, tmp_path = tempfile.mkstemp(suffix=suffix)
         os.close(fd)
         tmp_path = pathlib.Path(tmp_path)
-        write_mode = _mode_writes(mode)
+        operation = _validate_storage_mode(mode)
+        write_mode = operation != 'r'
         try:
             if write_mode:
                 if not force and storage_label in self:
@@ -160,7 +185,7 @@ class StorageInterface(ABC):
 
 def _mode_writes(mode):
     """Return True when a file mode can modify storage contents."""
-    return any(flag in mode for flag in ('w', 'a', 'x', '+'))
+    return _validate_storage_mode(mode) != 'r'
 
 
 class LocalFileStorageInterface(StorageInterface):
@@ -248,9 +273,6 @@ class LocalFileStorageInterface(StorageInterface):
 
     @contextlib.contextmanager
     def open(self, storage_label, mode='rb', *, force=False):
-        if 'b' not in mode:
-            raise ValueError("StorageInterface.open only supports binary "
-                             "modes")
         if _mode_writes(mode):
             with super().open(storage_label, mode=mode, force=force) as f:
                 yield f

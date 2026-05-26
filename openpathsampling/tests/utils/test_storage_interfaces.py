@@ -93,6 +93,10 @@ class StorageInterfaceTest:
             f.write(b"opened contents")
         assert self.interface.load_bytes("opened") == b"opened contents"
 
+    def test_open_binary_mode_order_flexible(self):
+        with self.interface.open("prestored", mode="br") as f:
+            assert f.read() == b"prestored contents"
+
     def test_open_write_exception_does_not_commit(self):
         with pytest.raises(RuntimeError):
             with self.interface.open("failed-open", mode="wb") as f:
@@ -103,6 +107,12 @@ class StorageInterfaceTest:
     def test_open_text_mode_error(self):
         with pytest.raises(ValueError, match="binary"):
             with self.interface.open("prestored", mode="r"):
+                pass
+
+    @pytest.mark.parametrize("mode", ["ab", "ba", "r+b", "rb+", "br+"])
+    def test_open_unsupported_mode_error(self, mode):
+        with pytest.raises(ValueError, match="append/update"):
+            with self.interface.open("prestored", mode=mode):
                 pass
 
     def test_as_path_read(self):
@@ -116,6 +126,11 @@ class StorageInterfaceTest:
                 f.write(b"as-path contents")
         assert self.interface.load_bytes("as-path") == b"as-path contents"
 
+    def test_as_path_binary_mode_order_flexible(self):
+        with self.interface.as_path("prestored", mode="br") as path:
+            with open(path, mode="rb") as f:
+                assert f.read() == b"prestored contents"
+
     def test_as_path_atomic_exception_does_not_commit(self):
         with pytest.raises(RuntimeError):
             with self.interface.as_path("failed-path", mode="wb",
@@ -124,6 +139,12 @@ class StorageInterfaceTest:
                     f.write(b"failed contents")
                 raise RuntimeError("fail")
         assert "failed-path" not in self.interface
+
+    @pytest.mark.parametrize("mode", ["ab", "ba", "r+b", "rb+", "br+"])
+    def test_as_path_unsupported_mode_error(self, mode):
+        with pytest.raises(ValueError, match="append/update"):
+            with self.interface.as_path("prestored", mode=mode):
+                pass
 
 
 class TestLocalFileStorageInterface(StorageInterfaceTest):
