@@ -234,8 +234,7 @@ class LocalFileStorageInterface(StorageInterface):
         target_path = pathlib.Path(target_path)
         target_path.parent.mkdir(parents=True, exist_ok=True)
         local_path = self._local_path(storage_label)
-        _logger.debug("Copying file from {str(local_path)} "
-                      f"to {str(target_path)}")
+        _logger.debug("Copying file from %s to %s", local_path, target_path)
         shutil.copyfile(local_path, target_path)
 
     def delete(self, storage_label):
@@ -244,7 +243,7 @@ class LocalFileStorageInterface(StorageInterface):
             raise ValueError(f"'{obj}' is a directory, and can't be "
                              "deleted.")
         else:
-            _logger.debug("Deleting file {str(obj)}")
+            _logger.debug("Deleting file %s", obj)
             os.remove(obj)
 
     def __contains__(self, storage_label):

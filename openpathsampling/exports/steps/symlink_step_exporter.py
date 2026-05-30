@@ -169,7 +169,7 @@ class SymLinkStepExporter(StepExporter):
         # ensure parent directory exists
         raw_data_path.parent.mkdir(parents=True, exist_ok=True)
         writer = self._get_writer(sample)
-        writer(sample.trajectory, raw_data_path)
+        writer(sample.trajectory, os.fspath(raw_data_path))
 
 
 def export_steps(steps, writer=None, *, export_trials=True,

@@ -250,6 +250,25 @@ class TestSymLinkStepExporter:
         finally:
             os.chdir(original_cwd)
 
+    def test_export_raw_sample_writer_gets_string_path(self, shooting_step,
+                                                       tmp_path):
+        step = shooting_step
+        sample = step.active[0]
+        filenames = []
+
+        def writer(trajectory, filename):
+            filenames.append(filename)
+            pathlib.Path(filename).parent.mkdir(parents=True, exist_ok=True)
+            pathlib.Path(filename).touch()
+
+        writer.ext = "dat"
+        exporter = SymLinkStepExporter(base_dir=tmp_path, writer=writer)
+
+        exporter.export_raw_sample(step, sample)
+
+        assert len(filenames) == 1
+        assert isinstance(filenames[0], str)
+
     def test_base_dir_without_chdir(self, shooting_step, tmp_path):
         step = shooting_step
         sample = step.change.trials[0]
@@ -415,7 +434,7 @@ def test_export_steps_base_dir_without_chdir(all_steps, tmp_path):
     assert actual_raw_files == expected_raw_files
     assert mock_writer.call_count == len(expected_raw_files)
     assert {call.args[1] for call in mock_writer.call_args_list} == (
-        expected_raw_files
+        {os.fspath(path) for path in expected_raw_files}
     )
 
 
