@@ -16,21 +16,24 @@ jobs:
   tests:
     runs-on: ubuntu-latest
     name: "Tests"
+    strategy:
+      matrix:
+        CONDA_PY:
+          - "3.11"
     steps:
       - uses: actions/checkout@v2
         with:
           fetch-depth: 2
       - uses: actions/setup-python@v2
-      - uses: conda-incubator/setup-miniconda@v2
-        with: 
+      - uses: conda-incubator/setup-miniconda@v3
+        with:
           auto-update-conda: true
+          python-version: ${{ matrix.CONDA_PY }}
+          miniforge-version: latest
       - name: "Install requirements"
+        env:
+          CONDA_PY: ${{ matrix.CONDA_PY }}
         run: |
-          # we'd rather use the default Python version, but for now need to
-          # pin to 3.9 (see openpathsampling/openpathsampling#1093)
-          #CONDA_PY=$(python -c "import sys; print('.'.join(str(s) for s in sys.version_info[:2]))")
-          export CONDA_PY="3.11"
-          echo "Python version: ${CONDA_PY}"
           source devtools/conda_install_reqs.sh
       - name: "Install OpenMM RC"
         run: |
@@ -38,7 +41,9 @@ jobs:
       - name: "Install"
         run: |
           python -m pip install --no-deps -e .
-          python -c "import openpathsampling"
+      - name: "Check installation"
+        run: |
+          python -c "import openpathsampling; print(openpathsampling.version.full_version)"
       - name: "Versions"
         run: conda list
       - name: "Unit Tests"
@@ -46,7 +51,6 @@ jobs:
           PY_COLORS: "1"
         run: py.test -vv -s --cov --cov-report xml
       - name: "Tests: Experimental"
-        if: matrix.MINIMAL == '' && matrix.CONDA_PY != '2.7'
         run: py.test openpathsampling/experimental/ -vv -s
       - name: "Notebook tests"
         run: |
