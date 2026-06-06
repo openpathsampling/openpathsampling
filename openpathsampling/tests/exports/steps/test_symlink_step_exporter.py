@@ -1,6 +1,8 @@
-import pytest
-import pathlib
 import contextlib
+import os
+import pathlib
+
+import pytest
 import openpathsampling as paths
 from unittest.mock import Mock
 
@@ -9,6 +11,7 @@ from openpathsampling.exports.steps.symlink_step_exporter import (
     _DEFAULT_TRIAL_PATTERN, _DEFAULT_ACTIVE_PATTERN, _DEFAULT_RAW_DATA_PATTERN,
     export_steps,
 )
+from openpathsampling.exports.steps.core import StepExporter
 
 from openpathsampling.tests.analysis.utils.mock_movers import (
     MockForwardShooting, MockRepex,
@@ -109,6 +112,9 @@ class TestSymLinkStepExporter:
         sample = Mock()
         sample.ensemble = ensemble
         assert self.exporter._get_ensemble_id(sample) == expected
+
+    def test_is_step_exporter(self):
+        assert isinstance(self.exporter, StepExporter)
 
     @pytest.mark.parametrize("source", ["obj", "most_common"])
     def test_get_writer(self, source):
@@ -228,6 +234,46 @@ class TestSymLinkStepExporter:
             assert pathlib.Path(raw_data_path).is_file()
             assert not pathlib.Path(raw_data_path).is_symlink()
 
+    def test_export_raw_sample_writer_gets_string_path(self, shooting_step,
+                                                       tmp_path):
+        step = shooting_step
+        sample = step.active[0]
+        filenames = []
+
+        def writer(trajectory, filename):
+            filenames.append(filename)
+            pathlib.Path(filename).parent.mkdir(parents=True, exist_ok=True)
+            pathlib.Path(filename).touch()
+
+        writer.ext = "dat"
+        exporter = SymLinkStepExporter(base_dir=tmp_path, writer=writer)
+
+        exporter.export_raw_sample(step, sample)
+
+        assert len(filenames) == 1
+        assert isinstance(filenames[0], str)
+
+    def test_base_dir_without_chdir(self, shooting_step, tmp_path):
+        step = shooting_step
+        sample = step.change.trials[0]
+
+        exporter = SymLinkStepExporter(
+            base_dir=tmp_path, writer=self.mock_writer
+        )
+
+        exporter.export_trial_sample(step, sample)
+
+        subs_dict = exporter._substitution_dict(step, sample)
+        raw_data_path = tmp_path / exporter.raw_data_pattern.format(
+            **subs_dict
+        )
+        trial_path = tmp_path / exporter.trial_pattern.format(**subs_dict)
+
+        assert raw_data_path.exists()
+        assert trial_path.exists()
+        assert trial_path.is_symlink()
+        assert raw_data_path.samefile(trial_path)
+
     @pytest.mark.parametrize("step_type", ["shooting", "repex",
                                            "pathreversal"])
     def test_export_step(self, step_type, request, tmp_path):
@@ -329,6 +375,39 @@ def test_export_steps(all_steps, tmp_path):
             assert active_dir.exists()
             active_files = list(active_dir.glob(f"*.{writer_db3.ext}"))
             assert len(active_files) == 0
+
+
+def test_export_steps_base_dir_without_chdir(all_steps, tmp_path):
+    mock_writer = Mock()
+    mock_writer.ext = "db"
+
+    def mock_write_func(trajectory, filename):
+        pathlib.Path(filename).parent.mkdir(parents=True, exist_ok=True)
+        pathlib.Path(filename).touch()
+
+    mock_writer.side_effect = mock_write_func
+
+    export_steps(all_steps, writer=mock_writer, base_dir=tmp_path)
+
+    samples = [
+        sample
+        for step in all_steps
+        for sample in step.change.trials + list(step.active)
+    ]
+    expected_raw_files = {
+        tmp_path / "raw_data" / f"{sample.trajectory.__uuid__}."
+        f"{mock_writer.ext}"
+        for sample in samples
+    }
+    actual_raw_files = set(
+        (tmp_path / "raw_data").glob(f"*.{mock_writer.ext}")
+    )
+
+    assert actual_raw_files == expected_raw_files
+    assert mock_writer.call_count == len(expected_raw_files)
+    assert {call.args[1] for call in mock_writer.call_args_list} == (
+        {os.fspath(path) for path in expected_raw_files}
+    )
 
 
 def test_default_raw_pattern_paths(shooting_step):

@@ -64,6 +64,88 @@ class StorageInterfaceTest:
         assert "nested" not in self.interface
         assert "nonexistent" not in self.interface
 
+    def test_store_existing_no_force(self):
+        with pytest.raises(FileExistsError):
+            self.interface.store("prestored", self.localfile)
+
+    def test_store_existing_force(self):
+        self.interface.store("prestored", self.localfile, force=True)
+        assert self.interface.load_bytes("prestored") == b"localfile contents"
+
+    def test_store_bytes(self):
+        self.interface.store_bytes("bytes", b"bytes contents")
+        assert "bytes" in self.interface
+        assert self.interface.load_bytes("bytes") == b"bytes contents"
+
+    def test_store_bytes_existing_no_force(self):
+        with pytest.raises(FileExistsError):
+            self.interface.store_bytes("prestored", b"new")
+
+    def test_load_bytes(self):
+        assert self.interface.load_bytes("prestored") == b"prestored contents"
+
+    def test_open_read(self):
+        with self.interface.open("prestored", mode="rb") as f:
+            assert f.read() == b"prestored contents"
+
+    def test_open_write(self):
+        with self.interface.open("opened", mode="wb") as f:
+            f.write(b"opened contents")
+        assert self.interface.load_bytes("opened") == b"opened contents"
+
+    def test_open_binary_mode_order_flexible(self):
+        with self.interface.open("prestored", mode="br") as f:
+            assert f.read() == b"prestored contents"
+
+    def test_open_write_exception_does_not_commit(self):
+        with pytest.raises(RuntimeError):
+            with self.interface.open("failed-open", mode="wb") as f:
+                f.write(b"failed contents")
+                raise RuntimeError("fail")
+        assert "failed-open" not in self.interface
+
+    def test_open_text_mode_error(self):
+        with pytest.raises(ValueError, match="binary"):
+            with self.interface.open("prestored", mode="r"):
+                pass
+
+    @pytest.mark.parametrize("mode", ["ab", "ba", "r+b", "rb+", "br+"])
+    def test_open_unsupported_mode_error(self, mode):
+        with pytest.raises(ValueError, match="append/update"):
+            with self.interface.open("prestored", mode=mode):
+                pass
+
+    def test_as_path_read(self):
+        with self.interface.as_path("prestored", mode="rb") as path:
+            with open(path, mode="rb") as f:
+                assert f.read() == b"prestored contents"
+
+    def test_as_path_write(self):
+        with self.interface.as_path("as-path", mode="wb") as path:
+            with open(path, mode="wb") as f:
+                f.write(b"as-path contents")
+        assert self.interface.load_bytes("as-path") == b"as-path contents"
+
+    def test_as_path_binary_mode_order_flexible(self):
+        with self.interface.as_path("prestored", mode="br") as path:
+            with open(path, mode="rb") as f:
+                assert f.read() == b"prestored contents"
+
+    def test_as_path_atomic_exception_does_not_commit(self):
+        with pytest.raises(RuntimeError):
+            with self.interface.as_path("failed-path", mode="wb",
+                                        atomic=True) as path:
+                with open(path, mode="wb") as f:
+                    f.write(b"failed contents")
+                raise RuntimeError("fail")
+        assert "failed-path" not in self.interface
+
+    @pytest.mark.parametrize("mode", ["ab", "ba", "r+b", "rb+", "br+"])
+    def test_as_path_unsupported_mode_error(self, mode):
+        with pytest.raises(ValueError, match="append/update"):
+            with self.interface.as_path("prestored", mode=mode):
+                pass
+
 
 class TestLocalFileStorageInterface(StorageInterfaceTest):
     def _initialize_interface(self):
@@ -117,6 +199,66 @@ class TestLocalFileStorageInterface(StorageInterfaceTest):
         with open(stored_target, mode='r') as f:
             assert f.read() == "localfile contents"
 
+    def test_transfer_nested(self):
+        stored_target = self.interface.root / "nested_transfer/foo"
+        assert not stored_target.exists()
+        self.interface.transfer("nested_transfer/foo", self.localfile)
+        assert stored_target.exists()
+        assert not self.localfile.exists()
+        with open(stored_target, mode='r') as f:
+            assert f.read() == "localfile contents"
+
+    def test_store_rejects_path_escape(self):
+        with pytest.raises(ValueError, match="inside the storage root"):
+            self.interface.store("../escape", self.localfile)
+
+        assert not (self.tmpdir / "escape").exists()
+
+    def test_store_rejects_symlink_escape(self):
+        outside = self.tmpdir / "outside"
+        outside.mkdir()
+        (self.interface.root / "link-out").symlink_to(outside,
+                                                       target_is_directory=True)
+
+        with pytest.raises(ValueError, match="inside the storage root"):
+            self.interface.store("link-out/escape", self.localfile)
+
+        assert not (outside / "escape").exists()
+
+    def test_store_accepts_normalized_relative_path(self):
+        stored_target = self.interface.root / "normalized/foo"
+
+        self.interface.store("nested/../normalized/foo", self.localfile)
+
+        assert stored_target.exists()
+        with open(stored_target, mode='r') as f:
+            assert f.read() == "localfile contents"
+
+    def test_store_rejects_anchored_label(self):
+        with pytest.raises(ValueError, match="unanchored relative"):
+            self.interface.store("/anchored", self.localfile)
+
+    def test_as_path_direct_write_uses_final_path(self):
+        stored_target = self.interface.root / "direct/foo"
+        with self.interface.as_path("direct/foo", mode="wb",
+                                    atomic=False) as path:
+            assert path == stored_target
+            assert not path.exists()
+            with open(path, mode="wb") as f:
+                f.write(b"direct contents")
+        assert stored_target.read_bytes() == b"direct contents"
+
+    def test_as_path_atomic_write_stages_then_commits(self):
+        stored_target = self.interface.root / "atomic/foo"
+        with self.interface.as_path("atomic/foo", mode="wb",
+                                    atomic=True) as path:
+            assert path != stored_target
+            assert path.parent == stored_target.parent
+            with open(path, mode="wb") as f:
+                f.write(b"atomic contents")
+            assert not stored_target.exists()
+        assert stored_target.read_bytes() == b"atomic contents"
+
     def test_transfer_directory(self):
         source_dir = self.localdir / "directory"
         source_dir.mkdir(exist_ok=True, parents=True)
@@ -129,6 +271,25 @@ class TestLocalFileStorageInterface(StorageInterfaceTest):
 
         with pytest.raises(ValueError, match="is a directory"):
             self.interface.transfer("directory", source_dir)
+
+    def test_transfer_existing_directory_target(self):
+        existing_dir = self.interface.root / "existing-dir"
+        existing_dir.mkdir()
+
+        with pytest.raises(ValueError, match="existing directory"):
+            self.interface.transfer("existing-dir", self.localfile)
+
+        assert self.localfile.exists()
+
+    def test_transfer_existing_directory_target_force(self):
+        existing_dir = self.interface.root / "existing-dir"
+        existing_dir.mkdir()
+
+        with pytest.raises(ValueError, match="existing directory"):
+            self.interface.transfer("existing-dir", self.localfile,
+                                    force=True)
+
+        assert self.localfile.exists()
 
     def test_list_directory_not_directory(self):
         with pytest.raises(ValueError, match="is not a directory"):

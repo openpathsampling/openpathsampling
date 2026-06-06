@@ -1,4 +1,7 @@
 from openpathsampling.exports.trajectories import *
+from openpathsampling.utils.storage_interfaces import (
+    LocalFileStorageInterface, MemoryStorageInterface
+)
 
 from openpathsampling.tests.test_helpers import (
     data_filename, make_1d_traj
@@ -39,6 +42,17 @@ class TrajectoryWriterTestBase:
         self.writer(trajectory, outfile, force=True)
         assert outfile.exists()
         assert len(outfile.read_bytes()) > 0
+
+    def _test_write_storage(self, trajectory, storage, storage_label,
+                            read_filename):
+        assert storage_label not in storage
+        self.writer.write(trajectory, storage, storage_label)
+        assert storage_label in storage
+
+        storage.load(storage_label, read_filename)
+        traj = self._read_trajectory(read_filename)
+        assert len(traj) == len(trajectory)
+        assert traj == trajectory
 
     def test_call(self, trajectory_fixture, request, tmp_path):
         raise NotImplementedError()
@@ -98,6 +112,41 @@ class TestSimStoreTrajectoryWriter(TrajectoryWriterTestBase):
                                                  tmp_path / "test.db")
         finally:
             monkey_patches.unpatch(paths)
+
+    def test_write_memory_storage(self, request, tmp_path):
+        trajectory = request.getfixturevalue("ad_trajectory")
+        import openpathsampling as paths
+        from openpathsampling.experimental.storage import monkey_patches
+        paths = monkey_patches.monkey_patch_all(paths)
+
+        try:
+            storage = MemoryStorageInterface()
+            self._test_write_storage(
+                trajectory, storage, "traj.db", tmp_path / "read.db"
+            )
+        finally:
+            monkey_patches.unpatch(paths)
+
+    def test_write_local_storage(self, request, tmp_path):
+        trajectory = request.getfixturevalue("ad_trajectory")
+        import openpathsampling as paths
+        from openpathsampling.experimental.storage import monkey_patches
+        paths = monkey_patches.monkey_patch_all(paths)
+
+        try:
+            storage = LocalFileStorageInterface(tmp_path / "storage")
+            self._test_write_storage(
+                trajectory, storage, "traj.db", tmp_path / "read.db"
+            )
+        finally:
+            monkey_patches.unpatch(paths)
+
+    def test_write_storage_exists(self, request):
+        trajectory = request.getfixturevalue("ad_trajectory")
+        storage = MemoryStorageInterface()
+        storage.store_bytes("traj.db", b"existing")
+        with pytest.raises(FileExistsError):
+            self.writer.write(trajectory, storage, "traj.db")
 
     def test_call_not_patched_fail(self, request, tmp_path):
         trajectory = request.getfixturevalue("ad_trajectory")
