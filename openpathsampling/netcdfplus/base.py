@@ -353,6 +353,13 @@ class StorableObject(object):
         else:
             return cls(**dct)
 
+    def unproxy(self):
+        if hasattr(self, '_lazy') :
+            for attr, value in self._lazy.items() :
+                if hasattr(value, '__subject__') :
+                    self._lazy[attr] = value.__subject__
+                    value.__subject__.unproxy()
+
 
 class StorableNamedObject(StorableObject):
     """Mixin that allows an object to carry a .name property that can be saved
