@@ -13,6 +13,7 @@ logger = logging.getLogger(__name__)
     features.coordinates,
     features.velocities,
     features.box_vectors,
+    features.engine_masses,
     ext_features.file_info
 ])
 class InternalizedMDSnapshot(BaseSnapshot):
@@ -29,6 +30,7 @@ class InternalizedMDSnapshot(BaseSnapshot):
     ext_features.coordinates,
     ext_features.velocities,
     ext_features.box_vectors,
+    features.engine_masses,
     ext_features.file_info
 ])
 class ExternalMDSnapshot(BaseSnapshot):
