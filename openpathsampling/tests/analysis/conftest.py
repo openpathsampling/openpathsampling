@@ -4,6 +4,7 @@
 # objects imported into the main tests/conftest.py, for use across the test
 # suite.
 import openpathsampling as paths
+from openpathsampling import strategies
 
 from openpathsampling.tests.analysis.utils.fixture_classes import (
     TISSystemFixture, TPSSystemFixture, make_fixture, DEFAULT_CV
@@ -33,6 +34,12 @@ def two_state_tps_network():
     return network
 
 
+def make_two_way_shooting_scheme(network, engine):
+    scheme = paths.OneWayShootingMoveScheme(network, engine)
+    scheme.append(strategies.TwoWayShootingStrategy(engine))
+    return scheme
+
+
 default_unidirectional_tis = make_fixture(
     fixture_type=TISSystemFixture,
     make_network=unidirectional_tis_network,
@@ -45,4 +52,10 @@ default_two_state_tps = make_fixture(
     fixture_type=TPSSystemFixture,
     make_network=two_state_tps_network,
     scheme_type=paths.OneWayShootingMoveScheme,
+)
+
+two_state_tps_two_way_shooting = make_fixture(
+    fixture_type=TPSSystemFixture,
+    make_network=two_state_tps_network,
+    scheme_type=make_two_way_shooting_scheme,
 )

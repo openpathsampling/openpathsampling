@@ -4,6 +4,7 @@ import os
 from openpathsampling.storage import Storage
 
 import openpathsampling.engines.openmm as peng
+from . import analysis
 
 try:
     import mdtraj as md
